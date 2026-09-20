@@ -1,0 +1,49 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # `imaging` is a local file: dependency of the root package.json,
+      # so `npm ci` here also installs and links it. postinstall then
+      # runs scripts/copy-wasm-assets.mjs, which copies the codec .wasm
+      # files out of node_modules into public/wasm/ (see vite.config).
+      - name: Install dependencies
+        run: npm ci
+
+      # Set this to "/<repo-name>/" for a project page (most repos).
+      # Leave it unset (defaults to "/") for a <user>.github.io user page
+      # or a custom domain via CNAME below.
+      - name: Build
+        run: npm run build
+        env:
+          VITE_BASE_PATH: /FitForm/
+
+      # Uncomment if you're using a custom domain instead of the
+      # <user>.github.io/<repo> URL:
+      # - name: Add CNAME
+      #   run: echo "yourdomain.com" > dist/CNAME
+
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist
+          publish_branch: gh-pages

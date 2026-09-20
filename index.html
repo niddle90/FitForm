@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="FitForm — resize, compress, and convert photos & PDFs entirely in your browser, plus a private personal document vault backed by your own Google Drive." />
+    <meta property="og:title" content="FitForm — photo/PDF toolkit + private Drive vault" />
+    <meta property="og:description" content="Resize, compress, and convert photos & PDFs entirely in your browser, plus a private personal document vault backed by your own Google Drive." />
+    <meta property="og:image" content="/icon-512.png" />
+    <link rel="preconnect" href="https://accounts.google.com" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <title>FitForm — photo/PDF toolkit + private Drive vault</title>
+    <script>
+      (function () {
+        try {
+          var dark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

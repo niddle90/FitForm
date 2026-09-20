@@ -1,0 +1,79 @@
+{
+  "name": "imaging",
+  "version": "2.0.0",
+  "description": "Compress-to-target-size, format conversion, PDF page extraction, EXIF/JPEG inspection, and A4 print layout for images and PDFs — a hardened, cross-platform (browser + Node) TypeScript engine. compress is hybrid: a zero-WASM Canvas engine (any input format) plus an optional bundled, self-built, byte-verified native WASM compression core (JPEG in/out, deterministic across platforms). Every other tool still ships no self-rolled WASM — see README.",
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18.17"
+  },
+  "files": [
+    "dist",
+    "wasm",
+    "native",
+    "scripts",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/browser.d.ts",
+      "import": "./dist/browser.js"
+    },
+    "./node": {
+      "types": "./dist/node.d.ts",
+      "import": "./dist/node.js"
+    }
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:wasm": "bash scripts/build-wasm.sh",
+    "test": "node --import tsx test/run.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "prepublishOnly": "npm run typecheck && npm run test && npm run build"
+  },
+  "keywords": [
+    "image",
+    "jpeg",
+    "png",
+    "webp",
+    "pdf",
+    "compression",
+    "wasm",
+    "libjpeg-turbo",
+    "exif"
+  ],
+  "author": "",
+  "peerDependencies": {
+    "@embedpdf/pdfium": "2.15.0",
+    "@jsquash/jpeg": "1.6.0",
+    "@jsquash/png": "3.1.1",
+    "@jsquash/resize": "2.1.1",
+    "@jsquash/webp": "1.5.0",
+    "@napi-rs/canvas": "^0.1.65"
+  },
+  "peerDependenciesMeta": {
+    "@napi-rs/canvas": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@embedpdf/pdfium": "2.15.0",
+    "@jsquash/jpeg": "1.6.0",
+    "@jsquash/png": "3.1.1",
+    "@jsquash/resize": "2.1.1",
+    "@jsquash/webp": "1.5.0",
+    "@napi-rs/canvas": "^0.1.65",
+    "@types/emscripten": "^1.39.13",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "5.7.3"
+  }
+}

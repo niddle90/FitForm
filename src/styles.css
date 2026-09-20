@@ -1,0 +1,622 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/fredoka';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+
+/* ── Design tokens ─────────────────────────────────────────────────────── */
+/* A warm "notebook paper" system: cream background, thick black outlines,
+   flat offset "sticker" shadows instead of blur, and a bold rounded
+   display face for headings. Adapted from a reference set of app-store
+   screenshots — kept to borders/shadows/type/color here rather than the
+   illustrative coins/isometric art, since this is a working tool, not a
+   marketing screen. Light is the intended home of this look; dark keeps
+   the same bones (thick borders, flat shadows, warm accents) on ink
+   instead of paper, and is still followed automatically from the OS
+   setting — see hooks/useTheme.ts. */
+:root {
+  --background: 45 55% 93%;
+  --foreground: 30 15% 10%;
+  --card: 45 40% 98%;
+  --card-foreground: 30 15% 10%;
+  --popover: 45 40% 98%;
+  --popover-foreground: 30 15% 10%;
+  --primary: 152 58% 38%;
+  --primary-foreground: 45 40% 98%;
+  --secondary: 45 30% 89%;
+  --secondary-foreground: 30 15% 12%;
+  --muted: 42 32% 88%;
+  --muted-foreground: 30 10% 38%;
+  --accent: 42 90% 58%;
+  --accent-foreground: 30 15% 10%;
+  --destructive: 6 82% 52%;
+  --destructive-foreground: 45 40% 98%;
+  --success: 152 58% 34%;
+  --border: 30 15% 10%;
+  --input: 30 15% 10%;
+  --ring: 152 58% 34%;
+  --radius: 1.1rem;
+  --sidebar: 45 48% 91%;
+  --sidebar-foreground: 30 15% 14%;
+  --sidebar-border: 30 15% 10%;
+  --shadow-ink: 30 15% 8%;
+}
+
+[data-theme='dark'] {
+  --background: 30 18% 8%;
+  --foreground: 45 35% 93%;
+  --card: 30 16% 12%;
+  --card-foreground: 45 35% 93%;
+  --popover: 30 16% 12%;
+  --popover-foreground: 45 35% 93%;
+  --primary: 152 50% 48%;
+  --primary-foreground: 30 20% 8%;
+  --secondary: 30 12% 18%;
+  --secondary-foreground: 45 30% 90%;
+  --muted: 30 12% 16%;
+  --muted-foreground: 42 16% 65%;
+  --accent: 42 85% 58%;
+  --accent-foreground: 30 20% 10%;
+  --destructive: 6 78% 58%;
+  --destructive-foreground: 45 35% 95%;
+  --success: 152 50% 55%;
+  --border: 42 25% 88%;
+  --input: 42 25% 82%;
+  --ring: 152 50% 55%;
+  --sidebar: 30 18% 7%;
+  --sidebar-foreground: 45 25% 85%;
+  --sidebar-border: 42 25% 85%;
+  --shadow-ink: 0 0% 0%;
+}
+
+@theme inline {
+  --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: 'Fredoka Variable', 'Fredoka', var(--font-sans);
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-success: hsl(var(--success));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-sidebar: hsl(var(--sidebar));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+
+  --radius-sm: calc(var(--radius) - 0.375rem);
+  --radius-md: calc(var(--radius) - 0.25rem);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.25rem);
+
+  /* Flat "sticker" shadows — a solid offset, no blur — instead of the
+     usual soft drop shadow. The signature move of this look. */
+  --shadow-hard-sm: 2px 2px 0 0 hsl(var(--shadow-ink));
+  --shadow-hard: 4px 4px 0 0 hsl(var(--shadow-ink));
+  --shadow-hard-lg: 6px 6px 0 0 hsl(var(--shadow-ink));
+}
+
+/* ── Base ──────────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    color-scheme: light;
+    -webkit-tap-highlight-color: transparent;
+  }
+  html[data-theme='dark'] {
+    color-scheme: dark;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: var(--font-sans);
+    font-feature-settings: 'cv11', 'ss01';
+    text-rendering: optimizeLegibility;
+  }
+  h1,
+  h2,
+  h3,
+  .font-display {
+    font-family: var(--font-display);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  ::selection {
+    @apply bg-primary/20;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full border-2 border-solid;
+    border-color: transparent;
+    background-clip: padding-box;
+  }
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='range'] {
+    @apply h-1.5 w-full cursor-pointer appearance-none rounded-full bg-secondary accent-[hsl(var(--primary))];
+  }
+  /* Every file-picker input in this app is a hidden proxy for a styled
+     dropzone/button that calls .click() on it — it should never render
+     its native "Choose File" control itself, in any state. */
+  input[type='file'] {
+    @apply hidden;
+  }
+}
+
+/* ── Shared component classes ─────────────────────────────────────────────
+   These back the existing markup in DimensionsControl / CropSelector /
+   CropPositioner (left untouched — they're canvas/pointer-math components,
+   not styling) plus the rest of the app's form controls, so every screen
+   picks up the new look without needing its interaction logic rewritten. */
+@layer components {
+  /* layout shell */
+  .app-shell {
+    @apply flex min-h-dvh w-full text-foreground;
+    background-color: hsl(var(--background));
+    background-image:
+      linear-gradient(hsl(var(--foreground) / 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(var(--foreground) / 0.05) 1px, transparent 1px);
+    background-size: 28px 28px;
+  }
+
+  .hero {
+    @apply mx-auto flex w-full max-w-xl flex-col items-center gap-4 py-10 text-center;
+  }
+  .hero__sub {
+    @apply max-w-sm text-sm leading-relaxed text-muted-foreground;
+  }
+
+  .engine-status {
+    @apply inline-flex items-center gap-1.5 rounded-full border-2 border-border bg-card px-2.5 py-1 text-xs font-semibold text-muted-foreground shadow-hard-sm;
+  }
+  .engine-status__dot {
+    @apply h-1.5 w-1.5 rounded-full bg-muted-foreground;
+  }
+  .engine-status--ready .engine-status__dot {
+    @apply bg-foreground;
+  }
+  .engine-status--loading .engine-status__dot {
+    @apply bg-muted-foreground animate-pulse;
+  }
+  .engine-status--error .engine-status__dot {
+    @apply bg-destructive;
+  }
+  .engine-status--error {
+    @apply text-destructive;
+  }
+  .engine-status__retry {
+    @apply ml-1 rounded-md border border-current/30 px-1.5 py-0.5 text-[11px] font-semibold hover:bg-destructive/10;
+  }
+
+  /* dropzone + file rows */
+  .dropzone {
+    @apply relative flex w-full cursor-pointer flex-col items-center gap-2 rounded-xl border-[3px] border-dashed border-border bg-card/70 px-6 py-10 text-center transition-colors hover:border-primary hover:bg-primary/5;
+  }
+  .dropzone--active {
+    @apply border-primary bg-primary/10;
+  }
+  .dropzone--compact {
+    @apply gap-1 px-4 py-6;
+  }
+  .dropzone__icon {
+    @apply flex h-11 w-11 items-center justify-center rounded-full border-2 border-border bg-accent text-accent-foreground;
+  }
+  .dropzone__title {
+    @apply text-sm font-semibold text-foreground;
+  }
+  .dropzone__hint {
+    @apply text-xs text-muted-foreground;
+  }
+
+  .file-row {
+    @apply flex w-full items-center gap-3 rounded-xl border-2 border-border bg-card px-3 py-2.5 shadow-hard-sm;
+  }
+  .file-row__icon {
+    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-border bg-secondary text-secondary-foreground;
+  }
+  .file-row__icon--thumb {
+    @apply overflow-hidden p-0;
+  }
+  .file-row__icon--thumb img {
+    @apply h-full w-full object-cover;
+  }
+  .file-row__preview-trigger {
+    @apply flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+  }
+  .file-row__text {
+    @apply min-w-0 flex-1;
+  }
+  .file-row__name {
+    @apply truncate text-sm font-medium text-foreground;
+  }
+  .file-row__meta {
+    @apply truncate text-xs text-muted-foreground;
+  }
+
+  .vault-preview {
+    @apply flex max-h-[60vh] w-full items-center justify-center overflow-hidden rounded-xl border-2 border-border bg-[repeating-conic-gradient(hsl(var(--muted))_0%_25%,transparent_0%_50%)] bg-[length:16px_16px];
+  }
+  .vault-preview__img {
+    @apply max-h-[60vh] w-full object-contain;
+  }
+  .vault-preview__empty {
+    @apply flex flex-col items-center gap-2 p-10 text-muted-foreground;
+  }
+
+  /* sections / fields */
+  .section {
+    @apply flex w-full flex-col gap-3 rounded-xl border-2 border-border bg-card p-4 shadow-hard;
+  }
+  .section__head {
+    @apply flex flex-col gap-0.5;
+  }
+  .section__head--switch {
+    @apply flex-row items-start justify-between gap-3;
+  }
+  .section__head h3,
+  .section__title {
+    @apply font-display text-base font-semibold text-foreground;
+  }
+  .section__head p {
+    @apply text-xs leading-relaxed text-muted-foreground;
+  }
+
+  .dims-row {
+    @apply flex items-end gap-2;
+  }
+  .dims-row__by {
+    @apply pb-2 text-base font-semibold text-muted-foreground;
+  }
+
+  .field {
+    @apply flex flex-1 flex-col gap-1.5;
+  }
+  .field__label {
+    @apply text-xs font-semibold text-muted-foreground;
+  }
+  .field__label em {
+    @apply font-mono text-[11px] not-italic text-foreground/70;
+  }
+  .field__derived {
+    @apply text-[11px] text-muted-foreground;
+  }
+  .field input[type='number'],
+  .field input[type='text'],
+  .field select,
+  .text-input {
+    @apply h-9 w-full rounded-lg border-2 border-input bg-background px-3 text-sm font-medium text-foreground outline-none transition-[transform,box-shadow] focus-visible:translate-x-[1px] focus-visible:translate-y-[1px] focus-visible:shadow-none;
+    box-shadow: var(--shadow-hard-sm);
+  }
+  .field input:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+  .field select {
+    @apply cursor-pointer;
+  }
+  .text-input--inline {
+    @apply h-7 px-2 text-xs;
+  }
+
+  .checkline {
+    @apply flex cursor-pointer items-center gap-2 text-xs text-muted-foreground;
+  }
+  .checkline input {
+    @apply h-3.5 w-3.5 rounded border-2 border-input accent-[hsl(var(--primary))];
+  }
+
+  .hint-text {
+    @apply text-xs leading-relaxed text-muted-foreground;
+  }
+  .hint-text--center {
+    @apply text-center;
+  }
+  .hint-text .info-tip {
+    @apply ml-1 align-middle;
+  }
+
+  /* chip / segmented / anchor pickers */
+  .chip-grid {
+    @apply flex flex-wrap gap-1.5;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-lg border-2 border-border bg-background px-3 py-1.5 text-xs font-semibold text-foreground shadow-hard-sm transition-[transform,box-shadow] hover:-translate-y-0.5;
+  }
+  .chip.is-active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .segmented {
+    @apply inline-flex w-full items-center rounded-lg border-2 border-border bg-secondary/70 p-1 text-xs;
+  }
+  .segmented button {
+    @apply flex-1 rounded-md px-2.5 py-1.5 font-semibold text-muted-foreground transition-colors hover:text-foreground;
+  }
+  .segmented button.is-active {
+    @apply border-2 border-border bg-card text-foreground shadow-hard-sm;
+  }
+  .segmented--compact button {
+    @apply py-1;
+  }
+
+  .anchor-grid {
+    @apply grid grid-cols-3 gap-1.5;
+  }
+  .anchor-grid button {
+    @apply rounded-lg border-2 border-border bg-background px-2 py-1.5 text-xs font-semibold text-foreground shadow-hard-sm transition-[transform,box-shadow] hover:-translate-y-0.5;
+  }
+  .anchor-grid button.is-active {
+    @apply bg-primary text-primary-foreground;
+  }
+
+  .crop-block {
+    @apply flex flex-col gap-2 border-t border-dashed border-border pt-3;
+  }
+  .crop-block__row {
+    @apply flex items-center;
+  }
+  .crop-block__summary {
+    @apply flex items-center justify-between text-xs text-muted-foreground;
+  }
+  .crop-tool {
+    @apply flex flex-col gap-2;
+  }
+  .crop-tool__reset {
+    @apply self-start;
+  }
+
+  /* buttons */
+  .btn {
+    @apply inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-input bg-background px-4 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent disabled:pointer-events-none disabled:opacity-40;
+  }
+  .btn--primary {
+    @apply border-transparent bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+  .btn--danger {
+    @apply border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/90;
+  }
+  .btn--large {
+    @apply h-11 px-6 text-[15px];
+  }
+  .btn--block {
+    @apply w-full;
+  }
+  .btn--run {
+    @apply h-11 flex-1 text-[15px];
+  }
+  .btn--cancel {
+    @apply flex-none px-3;
+  }
+
+  .icon-btn {
+    @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-accent hover:text-foreground;
+  }
+  .icon-btn--danger:hover {
+    @apply bg-destructive/10 text-destructive;
+  }
+  .link-btn {
+    @apply inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline;
+  }
+  .link-btn--icon {
+    @apply text-muted-foreground hover:text-primary;
+  }
+
+  .spin {
+    animation: spin 0.9s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* advanced disclosure */
+  .advanced {
+    @apply w-full;
+  }
+  .advanced__toggle {
+    @apply inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground;
+  }
+  .advanced__chevron {
+    @apply transition-transform duration-150;
+  }
+  .advanced__chevron--open {
+    @apply rotate-180;
+  }
+  .advanced__body {
+    @apply mt-3 flex flex-col gap-3 rounded-lg border-2 border-border bg-secondary/40 p-3;
+  }
+
+  /* preview / results */
+  .preview {
+    @apply flex w-full flex-col gap-3;
+  }
+  .preview__frames {
+    @apply grid grid-cols-1 gap-3;
+  }
+  .preview__frames--split {
+    @apply grid-cols-2;
+  }
+  .preview__frame {
+    @apply flex flex-col gap-2 overflow-hidden rounded-xl border-2 border-border bg-card shadow-hard;
+  }
+  .preview__media {
+    @apply relative flex aspect-square items-center justify-center overflow-hidden bg-[repeating-conic-gradient(hsl(var(--muted))_0%_25%,transparent_0%_50%)] bg-[length:16px_16px];
+  }
+  .preview__media img {
+    @apply h-full w-full object-contain;
+  }
+  .preview__placeholder {
+    @apply flex flex-col items-center gap-2 text-muted-foreground;
+  }
+  .preview__placeholder--busy {
+    @apply text-xs font-medium;
+  }
+  .preview__spinner {
+    @apply h-6 w-6 animate-spin rounded-full border-2 border-primary/25 border-t-primary;
+  }
+  .preview__caption {
+    @apply flex items-center justify-between px-3 pb-2.5 text-xs;
+  }
+  .preview__caption > span:first-child {
+    @apply font-semibold text-foreground;
+  }
+  .preview__caption-meta {
+    @apply text-muted-foreground;
+  }
+  .preview__delta--down {
+    @apply font-semibold text-success;
+  }
+  .preview__delta--up {
+    @apply font-semibold text-destructive;
+  }
+
+  .result-name {
+    @apply w-full;
+  }
+  .result-name__display {
+    @apply inline-flex max-w-full items-center gap-1.5 rounded-md px-1.5 py-1 text-sm font-medium text-foreground transition-colors hover:bg-accent;
+  }
+
+  /* info tip */
+  .info-tip {
+    @apply relative inline-flex items-center ml-1 align-middle;
+  }
+  .info-tip__trigger {
+    @apply inline-flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground;
+  }
+  .info-tip__popover {
+    @apply absolute bottom-full left-1/2 z-40 mb-2 w-64 -translate-x-1/2 rounded-lg border-2 border-border bg-popover p-2.5 text-xs font-normal leading-relaxed text-popover-foreground shadow-hard-sm;
+  }
+
+  .callout {
+    @apply flex items-start gap-2.5 rounded-lg border-2 p-3 text-xs leading-relaxed;
+  }
+  .callout--error {
+    @apply border-destructive bg-destructive/10 text-destructive;
+  }
+  .callout--info {
+    @apply border-primary bg-primary/10 text-primary;
+  }
+  .callout strong {
+    @apply block text-[13px] font-semibold text-foreground;
+  }
+  .callout--error strong {
+    @apply text-destructive;
+  }
+
+  .details {
+    @apply flex flex-col gap-2;
+  }
+  .details__toggle {
+    @apply inline-flex items-center gap-1.5 self-start text-xs font-semibold text-muted-foreground hover:text-foreground;
+  }
+  .details__body {
+    @apply flex flex-col gap-3;
+  }
+
+  .result-table {
+    @apply w-full border-collapse overflow-hidden rounded-lg border-2 border-border text-xs;
+  }
+  .result-table th {
+    @apply border-b border-border bg-secondary/60 px-2.5 py-1.5 text-left font-semibold text-muted-foreground;
+  }
+  .result-table td {
+    @apply border-b border-border/70 px-2.5 py-1.5 text-foreground last:border-0;
+  }
+  .result-table tr:last-child td {
+    @apply border-0;
+  }
+
+  .console {
+    @apply max-h-40 overflow-y-auto rounded-lg border-2 border-border bg-[hsl(30_18%_8%)] p-2.5 font-mono text-[11px] leading-relaxed text-zinc-300;
+  }
+  .console__empty {
+    @apply text-zinc-500;
+  }
+  .console__line {
+    @apply flex gap-2;
+  }
+  .console__stage {
+    @apply shrink-0 rounded px-1 text-zinc-400;
+  }
+  .console__stage--error {
+    @apply text-red-400;
+  }
+  .console__cursor {
+    @apply inline-block h-3 w-1.5 animate-pulse bg-zinc-400 align-middle;
+  }
+
+  .empty-state {
+    @apply rounded-xl border-[3px] border-dashed border-border p-6 text-center text-sm text-muted-foreground;
+  }
+
+  /* crop tools — structural rules the pointer-math components rely on;
+     keep position/geometry exact even as the cosmetic layer changes. */
+  .crop-positioner {
+    @apply flex flex-col gap-2;
+  }
+  .crop-positioner__frame {
+    @apply relative w-full select-none overflow-hidden rounded-lg border-2 border-border bg-secondary/40;
+  }
+  .crop-positioner__img {
+    @apply block w-full select-none;
+  }
+  .crop-positioner__box {
+    @apply absolute rounded-md border-2 border-primary shadow-[0_0_0_9999px_rgba(0,0,0,0.45)];
+    touch-action: none;
+  }
+  .crop-positioner__box.is-draggable {
+    @apply cursor-grab active:cursor-grabbing;
+  }
+  .crop-positioner__handle {
+    @apply pointer-events-none absolute inset-0 flex items-center justify-center text-base text-white/90;
+  }
+  .crop-positioner__hint {
+    @apply text-[11px] text-muted-foreground;
+  }
+  .crop-selector__box {
+    @apply absolute cursor-move rounded-md border-2 border-primary shadow-[0_0_0_9999px_rgba(0,0,0,0.45)];
+    touch-action: none;
+  }
+  .crop-selector__handle {
+    @apply absolute h-6 w-6 rounded-full border-2 border-primary bg-white shadow;
+    touch-action: none;
+  }
+  .crop-selector__handle--nw {
+    @apply -left-3 -top-3 cursor-nwse-resize;
+  }
+  .crop-selector__handle--ne {
+    @apply -right-3 -top-3 cursor-nesw-resize;
+  }
+  .crop-selector__handle--sw {
+    @apply -bottom-3 -left-3 cursor-nesw-resize;
+  }
+  .crop-selector__handle--se {
+    @apply -bottom-3 -right-3 cursor-nwse-resize;
+  }
+}
