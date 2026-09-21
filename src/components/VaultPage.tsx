@@ -120,10 +120,10 @@ export function VaultPage({ drive, onOpenInStudio }: Props) {
       </div>
 
       <div className="flex gap-3 text-[11px] text-muted-foreground">
-        <a href="/terms.html" target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-foreground">
+        <a href={`${import.meta.env.BASE_URL}terms.html`} target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-foreground">
           Terms of Service
         </a>
-        <a href="/privacy.html" target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-foreground">
+        <a href={`${import.meta.env.BASE_URL}privacy.html`} target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-foreground">
           Privacy Policy
         </a>
       </div>
@@ -189,11 +189,11 @@ export function VaultPage({ drive, onOpenInStudio }: Props) {
           <p className="hero__sub">You'll be asked to grant access to a single app-only Drive folder.</p>
           <p className="hero__sub text-xs">
             By continuing you agree to FitForm's{' '}
-            <a href="/terms.html" target="_blank" rel="noopener" className="underline">
+            <a href={`${import.meta.env.BASE_URL}terms.html`} target="_blank" rel="noopener" className="underline">
               Terms of Service
             </a>{' '}
             and{' '}
-            <a href="/privacy.html" target="_blank" rel="noopener" className="underline">
+            <a href={`${import.meta.env.BASE_URL}privacy.html`} target="_blank" rel="noopener" className="underline">
               Privacy Policy
             </a>
             .
