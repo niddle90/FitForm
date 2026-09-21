@@ -14,17 +14,38 @@
 // That token lives only in memory for the life of the tab; nothing is
 // persisted to localStorage. Reload the page and you sign in again.
 //
-// To use this yourself, you need your own OAuth 2.0 Client ID from Google
-// Cloud Console (APIs & Services → Credentials → Create Credentials →
-// OAuth client ID → Application type "Web application"), with your GitHub
-// Pages origin (e.g. https://you.github.io) added under "Authorized
-// JavaScript origins". A Client ID is a public identifier, not a secret —
-// it's fine for it to live in client-side code or a public repo.
+// The OAuth Client ID is fixed at build time (DRIVE_CLIENT_ID below) and is
+// not configurable at runtime. It's a public identifier, not a secret, so
+// it's fine for it to live in client-side code or a public repo. Running
+// your own copy on a different origin? Create a Web-application OAuth
+// Client ID in Google Cloud Console, add your origin under "Authorized
+// JavaScript origins", and replace the constant below.
 
 const GIS_SRC = 'https://accounts.google.com/gsi/client';
 const DRIVE_FILE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 
-export const CLIENT_ID_STORAGE_KEY = 'fitform:drive-client-id';
+/**
+ * This deployment's Google OAuth Client ID (Web application type), authorized
+ * for this site's origin. Vault always signs in with this ID: there is no
+ * runtime override.
+ */
+export const DRIVE_CLIENT_ID = '400701752867-bq43ns7mbnric8apk5ktpt6vaftvmmc5.apps.googleusercontent.com';
+
+/**
+ * Earlier builds let people paste their own Client ID into a Settings panel
+ * and kept it under this key. That override is gone, so the key is only ever
+ * read to delete it (see `purgeLegacyClientIdOverride`).
+ */
+const LEGACY_CLIENT_ID_STORAGE_KEY = 'fitform:drive-client-id';
+
+/** Removes any Client ID override saved by an earlier build so it can't linger in localStorage. */
+export function purgeLegacyClientIdOverride(): void {
+  try {
+    localStorage.removeItem(LEGACY_CLIENT_ID_STORAGE_KEY);
+  } catch {
+    /* storage unavailable (private mode, blocked): nothing to purge */
+  }
+}
 
 let gisLoadPromise: Promise<void> | null = null;
 

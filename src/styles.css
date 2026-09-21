@@ -2,6 +2,7 @@
 @import 'tw-animate-css';
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/fredoka';
+@import '@fontsource/boogaloo/400.css';
 @import '@fontsource/jetbrains-mono/400.css';
 @import '@fontsource/jetbrains-mono/500.css';
 
@@ -73,6 +74,9 @@
 @theme inline {
   --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-display: 'Fredoka Variable', 'Fredoka', var(--font-sans);
+  /* Brand wordmark only ("FitForm"). Boogaloo ships a single 400 weight, so
+     never pair it with font-semibold/bold: the browser would fake-bold it. */
+  --font-brand: 'Boogaloo', 'Fredoka Variable', 'Fredoka', var(--font-sans);
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   --color-background: hsl(var(--background));
@@ -454,45 +458,69 @@
   /* preview / results */
   .preview {
     @apply flex w-full flex-col gap-3;
+    /* Lets the Before/After grid respond to *this column's* width rather
+       than the viewport's: at ~1024px wide the column beside the controls
+       panel is only ~350px even though the window is wide. */
+    container: preview / inline-size;
   }
+  /* Stacked by default. The After slot stays hidden until it has something
+     to show, so a narrow layout doesn't open on a big empty box. */
   .preview__frames {
     @apply grid grid-cols-1 gap-3;
   }
-  .preview__frames--split {
-    @apply grid-cols-2;
-  }
   .preview__frame {
-    @apply flex flex-col gap-2 overflow-hidden rounded-xl border-2 border-border bg-card shadow-hard;
+    @apply flex min-w-0 flex-col overflow-hidden rounded-xl border-2 border-border bg-card shadow-hard;
+  }
+  .preview__frame--idle {
+    @apply hidden border-dashed bg-card/50 shadow-none;
   }
   .preview__media {
-    @apply relative flex aspect-square items-center justify-center overflow-hidden bg-[repeating-conic-gradient(hsl(var(--muted))_0%_25%,transparent_0%_50%)] bg-[length:16px_16px];
+    @apply relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-[repeating-conic-gradient(hsl(var(--muted))_0%_25%,transparent_0%_50%)] bg-[length:16px_16px];
+  }
+  .preview__frame--idle .preview__media {
+    @apply bg-none;
   }
   .preview__media img {
     @apply h-full w-full object-contain;
   }
   .preview__placeholder {
-    @apply flex flex-col items-center gap-2 text-muted-foreground;
-  }
-  .preview__placeholder--busy {
-    @apply text-xs font-medium;
+    @apply flex min-w-0 max-w-full flex-col items-center gap-2 text-center text-xs font-medium text-muted-foreground;
   }
   .preview__spinner {
     @apply h-6 w-6 animate-spin rounded-full border-2 border-primary/25 border-t-primary;
   }
+  /* Fixed-height caption row, identical in both slots, so the frames are
+     the same height in every state. */
   .preview__caption {
-    @apply flex items-center justify-between px-3 pb-2.5 text-xs;
+    @apply flex h-10 shrink-0 items-center justify-between gap-2 border-t-2 border-border px-3 text-xs;
+  }
+  .preview__frame--idle .preview__caption {
+    @apply border-dashed;
   }
   .preview__caption > span:first-child {
-    @apply font-semibold text-foreground;
+    @apply shrink-0 font-semibold text-foreground;
   }
   .preview__caption-meta {
-    @apply text-muted-foreground;
+    @apply min-w-0 truncate whitespace-nowrap text-muted-foreground;
   }
   .preview__delta--down {
     @apply font-semibold text-success;
   }
   .preview__delta--up {
     @apply font-semibold text-destructive;
+  }
+
+  /* Declared last on purpose: it must come after the base .preview__frame--idle
+     rule above so `display: flex` wins at equal specificity. */
+  @container preview (min-width: 30rem) {
+    /* Side by side, with both slots always present, so the original never
+       changes size between idle, processing, and done. */
+    .preview__frames {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .preview__frame--idle {
+      display: flex;
+    }
   }
 
   .result-name {
@@ -510,7 +538,7 @@
     @apply inline-flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground;
   }
   .info-tip__popover {
-    @apply absolute bottom-full left-1/2 z-40 mb-2 w-64 -translate-x-1/2 rounded-lg border-2 border-border bg-popover p-2.5 text-xs font-normal leading-relaxed text-popover-foreground shadow-hard-sm;
+    @apply z-40 max-w-[calc(100vw-1.5rem)] rounded-lg border-2 border-border bg-popover p-2.5 text-xs font-normal leading-relaxed text-popover-foreground shadow-hard-sm;
   }
 
   .callout {

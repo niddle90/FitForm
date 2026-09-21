@@ -8,12 +8,9 @@ import {
   RefreshCw,
   LogOut,
   ShieldCheck,
-  Settings,
   Loader2,
   AlertTriangle,
   Wrench,
-  ExternalLink,
-  HelpCircle,
 } from 'lucide-react';
 import { formatBytes } from '../state/pipeline';
 import type { DriveFile } from '../drive/api';
@@ -52,9 +49,6 @@ interface Props {
 
 export function VaultPage({ drive, onOpenInStudio }: Props) {
   const [dragOver, setDragOver] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(drive.status === 'no-client-id');
-  const [setupGuideOpen, setSetupGuideOpen] = useState(false);
-  const [clientIdDraft, setClientIdDraft] = useState(drive.clientId);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState('');
   const [pendingDelete, setPendingDelete] = useState<DriveFile | null>(null);
@@ -84,13 +78,6 @@ export function VaultPage({ drive, onOpenInStudio }: Props) {
     [drive, onOpenInStudio],
   );
 
-  const saveClientId = () => {
-    drive.setClientId(clientIdDraft);
-    setSettingsOpen(false);
-  };
-
-  const origin = typeof window !== 'undefined' ? window.location.origin : '';
-
   return (
     <div className="vault mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 py-6 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -107,9 +94,6 @@ export function VaultPage({ drive, onOpenInStudio }: Props) {
               <RefreshCw size={15} className={drive.loadingFiles ? 'animate-spin' : ''} />
             </Button>
           )}
-          <Button variant="ghost" size="icon-sm" onClick={() => setSettingsOpen((v) => !v)} aria-label="Settings">
-            <Settings size={15} />
-          </Button>
           {drive.status === 'signed-in' && (
             <Button variant="ghost" size="sm" onClick={drive.disconnect}>
               <LogOut size={13} />
@@ -121,41 +105,12 @@ export function VaultPage({ drive, onOpenInStudio }: Props) {
 
       <div className="flex gap-3 text-[11px] text-muted-foreground">
         <a href={`${import.meta.env.BASE_URL}terms.html`} target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-foreground">
-          Terms of Service
+          Terms
         </a>
         <a href={`${import.meta.env.BASE_URL}privacy.html`} target="_blank" rel="noopener" className="underline underline-offset-2 hover:text-foreground">
-          Privacy Policy
+          Privacy
         </a>
       </div>
-
-      {settingsOpen && (
-        <div className="section">
-          <div className="section__head">
-            <h3>Google Drive connection</h3>
-          </div>
-          <p className="hint-text">
-            Paste a Google OAuth Client ID (Web application type).
-            <InfoTip>A Client ID is a public identifier, not a secret, so it's safe to keep in client-side code.</InfoTip>
-          </p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Input
-              placeholder="xxxxxxxx.apps.googleusercontent.com"
-              value={clientIdDraft}
-              onChange={(e) => setClientIdDraft(e.target.value)}
-              className="flex-1"
-            />
-            <div className="flex gap-2">
-              <Button onClick={saveClientId} disabled={!clientIdDraft.trim()}>
-                Save
-              </Button>
-              <Button variant="outline" onClick={() => setSetupGuideOpen(true)}>
-                <HelpCircle size={14} />
-                Setup guide
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {drive.error && (
         <div className="callout callout--error">
@@ -164,17 +119,7 @@ export function VaultPage({ drive, onOpenInStudio }: Props) {
         </div>
       )}
 
-      {drive.status === 'no-client-id' && !settingsOpen && (
-        <div className="hero">
-          <p className="hero__sub">Add a Google OAuth Client ID in settings to connect your personal cloud.</p>
-          <Button variant="outline" onClick={() => setSetupGuideOpen(true)}>
-            <HelpCircle size={14} />
-            How do I get one?
-          </Button>
-        </div>
-      )}
-
-      {(drive.status === 'signed-out' || drive.status === 'connecting' || drive.status === 'error') && drive.clientId && (
+      {(drive.status === 'signed-out' || drive.status === 'connecting' || drive.status === 'error') && (
         <div className="hero">
           <Button size="lg" onClick={drive.connect} disabled={drive.status === 'connecting'}>
             {drive.status === 'connecting' ? (
@@ -190,7 +135,7 @@ export function VaultPage({ drive, onOpenInStudio }: Props) {
           <p className="hero__sub text-xs">
             By continuing you agree to FitForm's{' '}
             <a href={`${import.meta.env.BASE_URL}terms.html`} target="_blank" rel="noopener" className="underline">
-              Terms of Service
+              Terms
             </a>{' '}
             and{' '}
             <a href={`${import.meta.env.BASE_URL}privacy.html`} target="_blank" rel="noopener" className="underline">
@@ -385,77 +330,6 @@ export function VaultPage({ drive, onOpenInStudio }: Props) {
             >
               Delete
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={setupGuideOpen} onOpenChange={setSetupGuideOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Connecting your own Google Drive</DialogTitle>
-            <DialogDescription>
-              A one-time, five-minute setup in Google Cloud Console. The Client ID it gives you is a public identifier, safe to paste here.
-            </DialogDescription>
-          </DialogHeader>
-          <ol className="flex flex-col gap-3 text-sm text-foreground">
-            <li className="flex gap-2.5">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">1</span>
-              <span>
-                Open{' '}
-                <a
-                  href="https://console.cloud.google.com/projectcreate"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="link-btn inline-flex"
-                >
-                  Google Cloud Console <ExternalLink size={11} />
-                </a>{' '}
-                and create a new project (or pick an existing one).
-              </span>
-            </li>
-            <li className="flex gap-2.5">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">2</span>
-              <span>
-                Under <strong>APIs &amp; Services &gt; Library</strong>, search for and enable the <strong>Google Drive API</strong>.
-              </span>
-            </li>
-            <li className="flex gap-2.5">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">3</span>
-              <span>
-                Under <strong>APIs &amp; Services &gt; OAuth consent screen</strong>, choose <strong>External</strong> and fill in an app
-                name and your email.
-                <InfoTip>
-                  While it's in "Testing" mode, add your own Google account under <strong>Test users</strong>, otherwise Google will block
-                  sign-in with an "app not verified" error.
-                </InfoTip>
-              </span>
-            </li>
-            <li className="flex gap-2.5">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">4</span>
-              <span>
-                Under <strong>APIs &amp; Services &gt; Credentials &gt; Create Credentials &gt; OAuth client ID</strong>, pick{' '}
-                <strong>Web application</strong>. Under <strong>Authorized JavaScript origins</strong>, add this page's exact
-                origin{origin ? ':' : ' (shown while the app is running).'}
-                {origin && (
-                  <code className="mt-1 block w-full break-all rounded-md bg-secondary px-2 py-1 font-mono text-xs text-foreground">{origin}</code>
-                )}
-                <InfoTip>
-                  Just the scheme and host, plus port in dev. No path, no trailing slash. Leave "Authorized redirect URIs" empty since this flow
-                  never redirects.
-                </InfoTip>
-              </span>
-            </li>
-            <li className="flex gap-2.5">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">5</span>
-              <span>Copy the Client ID it generates (ends in <code className="font-mono text-xs">.apps.googleusercontent.com</code>) and paste it into the field above.</span>
-            </li>
-          </ol>
-          <p className="hint-text">
-            Sign-in failing right after adding a domain?
-            <InfoTip>Origins can take a few minutes to propagate on Google's side. Wait a bit and retry before assuming it's misconfigured.</InfoTip>
-          </p>
-          <DialogFooter>
-            <Button onClick={() => setSetupGuideOpen(false)}>Got it</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

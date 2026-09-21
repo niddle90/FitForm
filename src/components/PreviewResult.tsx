@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronDown, Download, AlertTriangle, FileText, CloudUpload, Check, Pencil } from 'lucide-react';
+import { ChevronDown, Download, AlertTriangle, FileText, CloudUpload, Check, Pencil, ImageIcon } from 'lucide-react';
 import type { RunResult, InspectInfo } from '../engine/types';
 import { formatBytes, pctChange, bytesToBlob } from '../state/pipeline';
 import { LogConsole, type LogLine } from './LogConsole';
@@ -64,11 +64,14 @@ export function PreviewResult({
     setRenaming(false);
   }, [result]);
 
-  // Once a run finishes, bring the download button into view and focus it,
-  // so finishing a run always lands the person somewhere they can act on.
+  // Once a run finishes, make sure the download button is in view and focus
+  // it, so finishing a run always lands the person somewhere they can act on.
+  // `nearest` means no scroll at all when it's already visible: a `center`
+  // scroll here used to yank the page around even though the layout hadn't
+  // changed.
   useEffect(() => {
     if (!running && result && downloadRef.current) {
-      downloadRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      downloadRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       downloadRef.current.focus({ preventScroll: true });
     }
   }, [running, result]);
@@ -100,7 +103,10 @@ export function PreviewResult({
 
   return (
     <div className="preview">
-      <div className={`preview__frames${result ? ' preview__frames--split' : ''}`}>
+      {/* Both slots exist in every state (idle, running, done) and share the
+          same geometry, so nothing resizes or reflows when a run starts or
+          finishes. Only what's *inside* the After slot changes. */}
+      <div className="preview__frames">
         <div className="preview__frame">
           <div className="preview__media">
             {sourceUrl ? (
@@ -112,7 +118,7 @@ export function PreviewResult({
             )}
           </div>
           <div className="preview__caption">
-            <span>{result ? 'Before' : isPdfSource ? 'Selected page' : 'Your photo'}</span>
+            <span>Before</span>
             <span className="preview__caption-meta">
               {sourceBytes !== null && formatBytes(sourceBytes)}
               {sourceInfo?.width ? ` · ${sourceInfo.width}×${sourceInfo.height}` : ''}
@@ -120,34 +126,39 @@ export function PreviewResult({
           </div>
         </div>
 
-        {(result || running) && (
-          <div className="preview__frame">
-            <div className="preview__media">
-              {running && (
-                <div className="preview__placeholder preview__placeholder--busy">
-                  <span className="preview__spinner" />
-                  <span>{activeStageLabel ?? 'Working…'}</span>
-                </div>
-              )}
-              {!running && result && resultIsImage && resultUrl && <img src={resultUrl} alt="Result" />}
-              {!running && result && !resultIsImage && (
-                <div className="preview__placeholder">
-                  <FileText size={28} />
-                  <span>{result.filename}</span>
-                </div>
-              )}
-            </div>
-            {!running && result && (
-              <div className="preview__caption">
-                <span>After</span>
-                <span className="preview__caption-meta">
-                  {formatBytes(finalBytes!)}
-                  {delta && <span className={`preview__delta preview__delta--${isDown ? 'down' : 'up'}`}> {delta}</span>}
-                </span>
+        <div className={`preview__frame${!running && !result ? ' preview__frame--idle' : ''}`}>
+          <div className="preview__media">
+            {running ? (
+              <div className="preview__placeholder preview__placeholder--busy" role="status">
+                <span className="preview__spinner" />
+                <span>{activeStageLabel ?? 'Working…'}</span>
+              </div>
+            ) : result && resultIsImage && resultUrl ? (
+              <img src={resultUrl} alt="Result" />
+            ) : result ? (
+              <div className="preview__placeholder">
+                <FileText size={28} />
+                <span className="max-w-full truncate px-3">{result.filename}</span>
+              </div>
+            ) : (
+              <div className="preview__placeholder">
+                <ImageIcon size={28} />
+                <span>Your result appears here</span>
               </div>
             )}
           </div>
-        )}
+          <div className="preview__caption">
+            <span>After</span>
+            <span className="preview__caption-meta">
+              {!running && result && (
+                <>
+                  {formatBytes(finalBytes!)}
+                  {delta && <span className={`preview__delta preview__delta--${isDown ? 'down' : 'up'}`}> {delta}</span>}
+                </>
+              )}
+            </span>
+          </div>
+        </div>
       </div>
 
       {error && (

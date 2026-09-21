@@ -961,3 +961,70 @@ included a real `npm install`/`vite build`/`npm test`, which narrows
 what's left here specifically to "in an actual browser tab," not
 "anywhere outside a text editor" the way it did before), and
 per-operation (vs. worker-wide) cancellation (P3).
+
+---
+
+## 15. Branding pass, Vault Client ID enforced, and a stable Before/After layout
+
+**Layout bug (Studio preview).** The Before/After grid only switched to two
+columns once a result existed, so the frames changed size at every phase:
+one 608px frame after upload, two stacked 608px frames while processing
+(the spinner frame landed below the fold, and was 34px shorter because it
+had no caption), then both collapsing to 298px when the run finished.
+`PreviewResult` now renders both slots in every state (idle, running, done)
+with the same aspect ratio and a fixed-height caption row, so only the
+contents of the After slot change. The two-up vs. stacked choice is a
+container query on the preview column (`@container preview (min-width:
+30rem)`), not a viewport breakpoint, because beside the 380px controls
+panel the column is only ~350px wide at a 1024px window. When stacked, the
+empty After slot stays hidden until a run starts, so the original never
+resizes. The post-run `scrollIntoView` also changed from `center` to
+`nearest`, so it no longer scrolls when Download is already visible.
+
+**Vault always uses the hardcoded Client ID.** `DRIVE_CLIENT_ID` now lives
+in `src/drive/auth.ts` and is the only ID `createTokenClient` is ever given.
+Removed: the Settings gear and panel, the Client ID input, the setup-guide
+dialog, the `no-client-id` status, and `setClientId`. A value saved under
+`fitform:drive-client-id` by an earlier build is deleted on load
+(`purgeLegacyClientIdOverride`) and never read.
+
+**Branding.**
+- Wordmark set in Boogaloo (`--font-brand` / `font-brand`) in the sidebar,
+  mobile header, Terms, and Privacy. Self-hosted via `@fontsource/boogaloo`
+  instead of a Google Fonts `@import`, so the Privacy page's "Google is the
+  only third party, and only when you use Vault" statement stays true.
+- Static Terms/Privacy pages now load Inter and Fredoka from
+  `public/fonts/` (they named Inter but never loaded it), and their logo is
+  a circle like the app's rather than a rounded square.
+- Logo `src` in the app resolves against `import.meta.env.BASE_URL`, so it
+  loads under a subpath deploy.
+- `index.html`: `theme-color` matched to the light and dark backgrounds
+  (was near-black), `og:image` is now an absolute URL, and `og:site_name`
+  was added.
+
+**Page titles simplified.** `FitForm` (Studio), `Vault | FitForm` (Vault),
+`Terms | FitForm`, `Privacy | FitForm`; the Terms/Privacy headings are now
+"Terms" and "Privacy"; the Vault page's footer links read "Terms" and
+"Privacy". The meta description is one sentence.
+
+**Privacy page corrected.** Its "Last updated" date is September 22, 2026,
+and its `localStorage` sentence now says only the cached Vault folder ID is
+stored (it previously also listed theme, which isn't persisted, and the
+Client ID, which no longer is).
+
+**Verified:** `tsc -b` and `vite build` clean; `oxlint` reports the same 34
+warnings as before and no errors; `pipeline-test` and `client-test` pass.
+In headless Chromium, frame size was identical across idle/running/done at
+1280px, 1024px, and 390px wide; a planted stale Client ID override was
+deleted and Google Identity Services still received the hardcoded ID;
+Boogaloo loaded on the app and both static pages with no request to
+`fonts.googleapis.com`.
+
+**Not fixed (pre-existing):** `scripts/smoke-test.mjs` still imports the
+old package name `vault-suite` and the old export names (`vxpress`,
+`vxprint`, `vxconv`, `vxpeel`, `vxbind`), so `npm run smoke-test` fails
+with `ERR_MODULE_NOT_FOUND`. The equivalents in `imaging` are `compress`,
+`printLayout`, `convertFormat`, `pdfToImages`, and `jpegsToPdf`. Confirmed
+by running a temporary copy of the script with just those five names (and
+the package name) swapped: every check passed. The repo's script itself was
+left unchanged.

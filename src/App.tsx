@@ -62,6 +62,11 @@ export default function App() {
   useTheme();
   const [tab, setTab] = useState<AppTab>('studio');
 
+  // Keep the browser tab title short: the brand on Studio, "Vault | FitForm" on Vault.
+  useEffect(() => {
+    document.title = tab === 'vault' ? 'Vault | FitForm' : 'FitForm';
+  }, [tab]);
+
   // Lifted to the top so both the Studio and Vault tabs share one Drive
   // session — this is what makes "open a vault file in Studio" and "save a
   // Studio result to the vault" work without reconnecting or re-fetching.

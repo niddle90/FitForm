@@ -1,5 +1,5 @@
 import { type ReactNode, useState } from 'react';
-import { Menu, Waves, Wrench, Cloud } from 'lucide-react';
+import { Menu, Wrench, Cloud } from 'lucide-react';
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from './ui/sheet';
 import { Button } from './ui/button';
 import { Separator } from './ui/separator';
@@ -46,13 +46,31 @@ function NavList({ tab, onSelect }: { tab: AppTab; onSelect: (t: AppTab) => void
   );
 }
 
+// Resolved against Vite's base so the logo also loads when the app is
+// deployed under a subpath (e.g. https://user.github.io/FitForm/).
+const LOGO_SRC = `${import.meta.env.BASE_URL}logo.svg`;
+
+/** The FitForm logo and wordmark: the one place the brand name is set in the brand typeface. */
+function Wordmark({ size = 'md' }: { size?: 'sm' | 'md' }) {
+  const md = size === 'md';
+  return (
+    <span className="flex items-center gap-2.5">
+      <img
+        src={LOGO_SRC}
+        alt=""
+        width={md ? 32 : 28}
+        height={md ? 32 : 28}
+        className={cn('shrink-0 rounded-full', md ? 'h-8 w-8 shadow-hard-sm' : 'h-7 w-7')}
+      />
+      <span className={cn('font-brand leading-none tracking-wide text-foreground', md ? 'text-[1.6rem]' : 'text-2xl')}>FitForm</span>
+    </span>
+  );
+}
+
 function Brand() {
   return (
-    <div className="flex h-14 shrink-0 items-center gap-2.5 border-b-2 border-border px-4">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-border bg-primary text-primary-foreground shadow-hard-sm">
-        <Waves size={16} strokeWidth={2.5} />
-      </div>
-      <span className="font-display text-base font-semibold tracking-tight text-foreground">FitForm</span>
+    <div className="flex h-14 shrink-0 items-center border-b-2 border-border px-4">
+      <Wordmark />
     </div>
   );
 }
@@ -115,11 +133,8 @@ export function AppShell({ tab, onTabChange, headerRight, sidebarFooter, childre
                 <Menu size={18} />
               </Button>
             </SheetTrigger>
-            <div className="flex items-center gap-2 md:hidden">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg border-2 border-border bg-primary text-primary-foreground">
-                <Waves size={14} strokeWidth={2.5} />
-              </div>
-              <span className="font-display text-base font-semibold tracking-tight">FitForm</span>
+            <div className="md:hidden">
+              <Wordmark size="sm" />
             </div>
             <div className="ml-auto flex items-center gap-2">{headerRight}</div>
           </header>

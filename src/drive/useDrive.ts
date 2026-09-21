@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createTokenClient, CLIENT_ID_STORAGE_KEY, type DriveToken, type TokenClientHandle } from './auth';
+import { createTokenClient, DRIVE_CLIENT_ID, purgeLegacyClientIdOverride, type DriveToken, type TokenClientHandle } from './auth';
 import {
   ensureVaultFolder,
   listFiles,
@@ -11,7 +11,7 @@ import {
   type DriveFile,
 } from './api';
 
-export type DriveStatus = 'no-client-id' | 'signed-out' | 'connecting' | 'signed-in' | 'error';
+export type DriveStatus = 'signed-out' | 'connecting' | 'signed-in' | 'error';
 
 export interface UploadTask {
   id: string;
@@ -24,8 +24,7 @@ export interface UploadTask {
 const RENEW_SKEW_MS = 60_000;
 
 export function useDrive() {
-  const [clientId, setClientIdState] = useState<string>(() => localStorage.getItem(CLIENT_ID_STORAGE_KEY) || '');
-  const [status, setStatus] = useState<DriveStatus>(clientId ? 'signed-out' : 'no-client-id');
+  const [status, setStatus] = useState<DriveStatus>('signed-out');
   const [error, setError] = useState<string | null>(null);
   const [files, setFiles] = useState<DriveFile[]>([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
@@ -35,14 +34,6 @@ export function useDrive() {
   const tokenRef = useRef<DriveToken | null>(null);
   const folderIdRef = useRef<string | null>(null);
   const renewTimerRef = useRef<number | null>(null);
-
-  const setClientId = useCallback((id: string) => {
-    const trimmed = id.trim();
-    localStorage.setItem(CLIENT_ID_STORAGE_KEY, trimmed);
-    setClientIdState(trimmed);
-    setStatus(trimmed ? 'signed-out' : 'no-client-id');
-    setError(null);
-  }, []);
 
   const scheduleRenew = useCallback((token: DriveToken) => {
     if (renewTimerRef.current) window.clearTimeout(renewTimerRef.current);
@@ -77,15 +68,11 @@ export function useDrive() {
   }, []);
 
   const connect = useCallback(async () => {
-    if (!clientId) {
-      setStatus('no-client-id');
-      return;
-    }
     setStatus('connecting');
     setError(null);
     try {
       if (!tokenClientRef.current) {
-        tokenClientRef.current = await createTokenClient(clientId);
+        tokenClientRef.current = await createTokenClient(DRIVE_CLIENT_ID);
       }
       const token = await tokenClientRef.current.requestToken();
       tokenRef.current = token;
@@ -98,7 +85,7 @@ export function useDrive() {
       setStatus('error');
       setError(e instanceof Error ? e.message : 'Could not connect to Google Drive.');
     }
-  }, [clientId, refreshFiles, scheduleRenew]);
+  }, [refreshFiles, scheduleRenew]);
 
   const disconnect = useCallback(() => {
     if (renewTimerRef.current) window.clearTimeout(renewTimerRef.current);
@@ -109,12 +96,12 @@ export function useDrive() {
     setStatus('signed-out');
   }, []);
 
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    purgeLegacyClientIdOverride();
+    return () => {
       if (renewTimerRef.current) window.clearTimeout(renewTimerRef.current);
-    },
-    [],
-  );
+    };
+  }, []);
 
   const withToken = useCallback(async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
     if (!tokenRef.current) throw new Error('Not connected to Google Drive.');
@@ -216,8 +203,6 @@ export function useDrive() {
   );
 
   return {
-    clientId,
-    setClientId,
     status,
     error,
     files,
