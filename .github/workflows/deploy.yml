@@ -33,13 +33,9 @@ jobs:
       # or a custom domain via CNAME below.
       - name: Build
         run: npm run build
-        env:
-          VITE_BASE_PATH: /FitForm/
 
-      # Uncomment if you're using a custom domain instead of the
-      # <user>.github.io/<repo> URL:
-      # - name: Add CNAME
-      #   run: echo "yourdomain.com" > dist/CNAME
+      - name: Add CNAME
+        run: echo "slek.dev" > dist/CNAME
 
       - name: Deploy to gh-pages branch
         uses: peaceiris/actions-gh-pages@v4

@@ -2,7 +2,6 @@
 @import 'tw-animate-css';
 @import '@fontsource-variable/inter';
 @import '@fontsource-variable/fredoka';
-@import '@fontsource/boogaloo';
 @import '@fontsource/jetbrains-mono/400.css';
 @import '@fontsource/jetbrains-mono/500.css';
 
@@ -74,7 +73,6 @@
 @theme inline {
   --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-display: 'Fredoka Variable', 'Fredoka', var(--font-sans);
-  --font-brand: 'Boogaloo', var(--font-display);
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, monospace;
 
   --color-background: hsl(var(--background));
@@ -138,13 +136,6 @@
     font-family: var(--font-display);
     font-weight: 600;
     letter-spacing: -0.01em;
-  }
-  /* Brand wordmark only — Boogaloo is a single-weight display font, so
-     drop the extra font-weight/letter-spacing tuning meant for Fredoka. */
-  .font-brand {
-    font-family: var(--font-brand);
-    font-weight: 400;
-    letter-spacing: 0.01em;
   }
   ::selection {
     @apply bg-primary/20;
@@ -519,9 +510,7 @@
     @apply inline-flex h-4 w-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-accent hover:text-foreground;
   }
   .info-tip__popover {
-    --info-tip-shift: 0px;
-    @apply absolute bottom-full left-1/2 z-40 mb-2 w-64 max-w-[calc(100vw-1.5rem)] rounded-lg border-2 border-border bg-popover p-2.5 text-xs font-normal leading-relaxed text-popover-foreground shadow-hard-sm;
-    transform: translateX(calc(-50% + var(--info-tip-shift)));
+    @apply absolute bottom-full left-1/2 z-40 mb-2 w-64 -translate-x-1/2 rounded-lg border-2 border-border bg-popover p-2.5 text-xs font-normal leading-relaxed text-popover-foreground shadow-hard-sm;
   }
 
   .callout {

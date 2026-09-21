@@ -49,10 +49,10 @@ function NavList({ tab, onSelect }: { tab: AppTab; onSelect: (t: AppTab) => void
 function Brand() {
   return (
     <div className="flex h-14 shrink-0 items-center gap-2.5 border-b-2 border-border px-4">
-      <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-border bg-primary text-primary-foreground shadow-hard-sm">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg border-2 border-border bg-primary text-primary-foreground shadow-hard-sm">
         <Waves size={16} strokeWidth={2.5} />
       </div>
-      <span className="font-brand text-lg text-foreground">FitForm</span>
+      <span className="font-display text-base font-semibold tracking-tight text-foreground">FitForm</span>
     </div>
   );
 }
@@ -116,10 +116,10 @@ export function AppShell({ tab, onTabChange, headerRight, sidebarFooter, childre
               </Button>
             </SheetTrigger>
             <div className="flex items-center gap-2 md:hidden">
-              <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-border bg-primary text-primary-foreground">
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg border-2 border-border bg-primary text-primary-foreground">
                 <Waves size={14} strokeWidth={2.5} />
               </div>
-              <span className="font-brand text-lg">FitForm</span>
+              <span className="font-display text-base font-semibold tracking-tight">FitForm</span>
             </div>
             <div className="ml-auto flex items-center gap-2">{headerRight}</div>
           </header>

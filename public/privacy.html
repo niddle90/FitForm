@@ -3,14 +3,11 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>FitForm - Privacy Policy</title>
+<title>Privacy Policy — FitForm</title>
 <link rel="icon" type="image/svg+xml" href="logo.svg" />
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Boogaloo&display=swap');
   :root {
     --background: 45 55% 93%;
     --foreground: 30 15% 10%;
@@ -46,10 +43,10 @@
   .top { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 2rem; }
   .mark {
     width: 2rem; height: 2rem; flex-shrink: 0;
-    border-radius: 0.6rem; box-shadow: 2px 2px 0 0 hsl(var(--shadow-ink));
+    border-radius: 0.4375rem; box-shadow: 2px 2px 0 0 hsl(var(--shadow-ink));
     display: block;
   }
-  .brand { font-family: 'Boogaloo', cursive; font-weight: 400; font-size: 1.3rem; letter-spacing: 0.01em; }
+  .brand { font-weight: 700; font-size: 1.05rem; letter-spacing: -0.01em; }
   a { color: hsl(var(--primary)); text-decoration: underline; text-underline-offset: 2px; }
   a:hover { opacity: 0.8; }
   h1 { font-size: 1.8rem; letter-spacing: -0.01em; margin: 0 0 0.35rem; }
@@ -99,7 +96,7 @@
 
     <div class="card">
       <strong>The short version</strong>
-      FitForm is a static, client-side app. Your photos and PDFs get resized, compressed, and converted locally in your browser, and they're never uploaded to any server we operate. If you connect Google Drive, FitForm talks directly to Google's API from your browser using a short-lived, in-memory access token, so we don't receive, store, or have access to your Drive files or their contents.
+      FitForm is a static, client-side app. Your photos and PDFs are resized, compressed, and converted locally in your browser — they are never uploaded to any server we operate. If you connect Google Drive, FitForm talks directly to Google's API from your browser using a short-lived, in-memory access token; we do not receive, store, or have access to your Drive files or their contents.
     </div>
 
     <h2>1. Who we are</h2>
@@ -114,12 +111,12 @@
     <ul>
       <li>We never receive, see, or store the photos, PDFs, or other files you process with the Service.</li>
       <li>We do not run analytics or tracking scripts that profile you across sites, and we do not sell or share personal data with advertisers.</li>
-      <li>We do not collect your name, email address, or other account details for our own purposes. The only account we interact with at all is your Google account, and only for the specific Drive actions described below.</li>
+      <li>We do not collect your name, email address, or other account details for our own purposes — the only account we interact with is your Google account, and only for the specific Drive actions described below.</li>
     </ul>
 
     <h2>3. Local, on-device processing</h2>
     <p>
-      Our core features, resizing, cropping, compressing, and converting images and PDFs, run entirely inside your browser using WebAssembly. The files you're working with stay on your own device the whole time and never leave your computer as part of that processing.
+      Core features — resizing, cropping, compressing, and converting images and PDFs — run entirely inside your browser using WebAssembly, and process files that stay on your own device. These files never leave your computer as part of that processing.
     </p>
 
     <h2>4. Google Drive integration ("Vault")</h2>
@@ -128,11 +125,11 @@
     </p>
     <h3>4.1 Sign-in</h3>
     <p>
-      FitForm uses Google Identity Services (Google's own sign-in library) to request an OAuth access token directly from Google, from inside your browser. There is no server-side component to this sign-in. No client secret exists, and no authentication data passes through infrastructure we control.
+      FitForm uses Google Identity Services (Google's own sign-in library) to request an OAuth access token directly from Google, from inside your browser. There is no server-side component to this sign-in — no client secret exists, and no authentication data passes through infrastructure we control.
     </p>
     <h3>4.2 Scope of access</h3>
     <p>
-      FitForm requests only the <code>drive.file</code> scope, which is the narrowest scope Google Drive offers. This scope limits FitForm to:
+      FitForm requests only the <code>drive.file</code> scope — the narrowest scope Google Drive offers. This scope limits FitForm to:
     </p>
     <ul>
       <li>files and folders that FitForm itself creates (e.g. a "FitForm Vault" folder it creates on first use), and</li>
@@ -170,7 +167,7 @@
 
     <h2>5. Cookies and local storage</h2>
     <p>
-      FitForm does not use tracking cookies. It uses your browser's <code>localStorage</code> only for on-device app preferences, such as light/dark theme, your own Google OAuth Client ID if you're self-hosting the app, and the cached Vault folder ID described above. We never use it to identify or track you across other sites.
+      FitForm does not use tracking cookies. It uses your browser's <code>localStorage</code> only for on-device app preferences (such as light/dark theme, your own Google OAuth Client ID if you're self-hosting the app, and the cached Vault folder ID described above) — never to identify or track you across other sites.
     </p>
 
     <h2>6. Third parties</h2>
