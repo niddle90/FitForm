@@ -1028,3 +1028,37 @@ with `ERR_MODULE_NOT_FOUND`. The equivalents in `imaging` are `compress`,
 by running a temporary copy of the script with just those five names (and
 the package name) swapped: every check passed. The repo's script itself was
 left unchanged.
+
+---
+
+## 16. Vault tab, Terms/Privacy pages, and legal-link references
+
+**Vault tab.** Signed-out visitors now get a sign-in card explaining what the
+Vault is and what it can and cannot see, with the Terms/Privacy consent line
+under the button. Signed-in, a header bar shows the folder name, file count
+and total size with Refresh and Disconnect. File rows use per-type icons and
+larger thumbnails, a labelled "Open in Studio" button, and on phones the
+actions sit on their own row so long filenames aren't squeezed. Added loading
+skeletons, a quieter empty state, styled upload progress/errors, and a keyboard-
+operable upload box. No Drive, rename, delete or preview logic changed.
+
+**Terms and Privacy.** Both pages now share `public/legal.css` (previously
+~100 lines of duplicated inline CSS each) and `public/legal.js` (contents
+highlighting only; pages work without it). Sticky top bar with Terms/Privacy
+switcher, numbered sections via CSS counters, a contents list (side rail on
+desktop, disclosure on phones), a responsive data table that stacks on phones,
+dark mode, print styles, and prev/next navigation. Legal wording is unchanged;
+only section numbers moved into CSS and the page titles became "Terms of
+Service" / "Privacy Policy".
+
+**References.** The legal pages linked to `/terms.html`, `/privacy.html` and
+`/`, which 404 when deployed under `/FitForm/` (as `npm run deploy` does).
+They are now relative. A shared `LegalLinks` component is used in the Vault
+footer and the sidebar/mobile menu; the sign-in consent line links to the same
+URLs. Links open in a new tab so the in-memory Google token isn't lost.
+
+**Verified:** `tsc -b` clean; the changed components lint clean; Vault
+rendered in headless Chromium (mocked Drive) in signed-out, signed-in, empty,
+loading, uploading, dark and phone-width states; both legal pages rendered at
+desktop and phone widths in light and dark, including contents highlighting.
+**Not tested:** the live Google sign-in flow.

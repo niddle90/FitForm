@@ -3,211 +3,183 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Terms | FitForm</title>
+<title>Terms of Service | FitForm</title>
+<meta name="description" content="The terms for using FitForm, a free browser-based toolkit for photos and PDFs with an optional Google Drive vault." />
+<meta name="theme-color" content="#f7f2e3" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#181411" media="(prefers-color-scheme: dark)" />
 <link rel="icon" type="image/svg+xml" href="logo.svg" />
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png" />
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
-<style>
-  @font-face {
-    font-family: 'Boogaloo';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url('fonts/boogaloo.woff2') format('woff2');
-  }
-  @font-face {
-    font-family: 'Inter';
-    font-style: normal;
-    font-weight: 100 900;
-    font-display: swap;
-    src: url('fonts/inter.woff2') format('woff2');
-  }
-  @font-face {
-    font-family: 'Fredoka';
-    font-style: normal;
-    font-weight: 300 700;
-    font-display: swap;
-    src: url('fonts/fredoka.woff2') format('woff2');
-  }
-  :root {
-    --background: 45 55% 93%;
-    --foreground: 30 15% 10%;
-    --card: 45 40% 98%;
-    --primary: 152 58% 38%;
-    --primary-foreground: 45 40% 98%;
-    --muted-foreground: 30 10% 38%;
-    --border: 30 15% 10%;
-    --accent: 42 90% 58%;
-    --shadow-ink: 30 15% 8%;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --background: 30 18% 8%;
-      --foreground: 45 35% 93%;
-      --card: 30 16% 12%;
-      --primary: 152 50% 48%;
-      --primary-foreground: 30 20% 8%;
-      --muted-foreground: 42 16% 65%;
-      --border: 42 25% 88%;
-      --shadow-ink: 0 0% 0%;
-    }
-  }
-  * { box-sizing: border-box; }
-  h1, h2, h3 { font-family: 'Fredoka', 'Inter', ui-sans-serif, system-ui, sans-serif; font-weight: 600; }
-  html { -webkit-text-size-adjust: 100%; }
-  body {
-    margin: 0;
-    background: hsl(var(--background));
-    color: hsl(var(--foreground));
-    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
-    line-height: 1.6;
-  }
-  .wrap {
-    max-width: 760px;
-    margin: 0 auto;
-    padding: 2.5rem 1.25rem 5rem;
-  }
-  .top {
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    margin-bottom: 2rem;
-  }
-  .mark {
-    width: 2rem;
-    height: 2rem;
-    flex-shrink: 0;
-    border-radius: 50%;
-    box-shadow: 2px 2px 0 0 hsl(var(--shadow-ink));
-    display: block;
-  }
-  .brand { font-family: 'Boogaloo', 'Inter', ui-sans-serif, system-ui, sans-serif; font-weight: 400; font-size: 1.6rem; line-height: 1; letter-spacing: 0.025em; }
-  a { color: hsl(var(--primary)); text-decoration: underline; text-underline-offset: 2px; }
-  a:hover { opacity: 0.8; }
-  h1 {
-    font-size: 1.8rem;
-    letter-spacing: -0.01em;
-    margin: 0 0 0.35rem;
-  }
-  .updated { color: hsl(var(--muted-foreground)); font-size: 0.9rem; margin-bottom: 2rem; }
-  h2 {
-    font-size: 1.15rem;
-    margin: 2.2rem 0 0.6rem;
-    padding-bottom: 0.4rem;
-    border-bottom: 2px solid hsl(var(--border));
-  }
-  p, li { font-size: 0.97rem; }
-  ul { padding-left: 1.3rem; }
-  li { margin-bottom: 0.4rem; }
-  .card {
-    background: hsl(var(--card));
-    border: 2px solid hsl(var(--border));
-    border-radius: 0.9rem;
-    box-shadow: 4px 4px 0 0 hsl(var(--shadow-ink));
-    padding: 1.1rem 1.3rem;
-    margin: 1.2rem 0;
-    font-size: 0.92rem;
-  }
-  .card strong { display: block; margin-bottom: 0.3rem; }
-  footer {
-    margin-top: 3rem;
-    padding-top: 1.2rem;
-    border-top: 2px solid hsl(var(--border));
-    font-size: 0.85rem;
-    color: hsl(var(--muted-foreground));
-    display: flex;
-    gap: 1.2rem;
-    flex-wrap: wrap;
-  }
-  .placeholder { background: hsl(var(--accent) / 0.35); padding: 0 0.15rem; border-radius: 0.2rem; }
-</style>
+<link rel="preload" href="fonts/inter.woff2" as="font" type="font/woff2" crossorigin />
+<link rel="stylesheet" href="legal.css" />
 </head>
 <body>
-  <div class="wrap">
-    <div class="top">
-      <a href="./" style="display:flex; align-items:center; gap:0.6rem; text-decoration:none; color:inherit;">
+  <a class="skip" href="#content">Skip to content</a>
+
+  <header class="bar">
+    <div class="bar__in">
+      <a class="brand-link" href="./" aria-label="FitForm home">
         <img class="mark" src="logo.svg" alt="" width="32" height="32" />
         <span class="brand">FitForm</span>
       </a>
+      <nav class="tabs" aria-label="Legal pages">
+        <a href="terms.html" aria-current="page">Terms</a>
+        <a href="privacy.html">Privacy</a>
+      </nav>
+      <a class="btn" href="./" aria-label="Open FitForm"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg><span>Open app</span></a>
     </div>
+  </header>
 
-    <h1>Terms</h1>
-    <p class="updated">Last updated: September 22, 2026</p>
+  <div class="layout">
+    <aside class="side">
+      <nav class="toc" aria-label="On this page">
+        <p class="toc__title">On this page</p>
+        <ol>
+          <li><a href="#acceptance">Acceptance of these terms</a></li>
+          <li><a href="#what">What FitForm does</a></li>
+          <li><a href="#drive">Google Drive integration</a></li>
+          <li><a href="#content">Your account and content</a></li>
+          <li><a href="#warranty">No warranty</a></li>
+          <li><a href="#liability">Limitation of liability</a></li>
+          <li><a href="#changes">Changes to the Service or these Terms</a></li>
+          <li><a href="#termination">Termination</a></li>
+          <li><a href="#law">Governing law</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ol>
+      </nav>
+    </aside>
 
-    <div class="card">
-      <strong>The short version</strong>
-      FitForm runs entirely in your browser. Your photos and PDFs are processed on your own device, and nothing is uploaded to a server we run. If you connect Google Drive, FitForm talks directly to Google's servers using your own Google account, and we never see or store that data ourselves.
-    </div>
+    <main class="doc" id="content">
+      <h1>Terms of Service</h1>
+      <p class="updated"><time datetime="2026-09-22">Last updated September 22, 2026</time></p>
 
-    <h2>1. Acceptance of these terms</h2>
-    <p>
-      By accessing or using FitForm (the "Service"), provided by Somnath Pratihar, an independent student developer based in India
-      ("we", "us", "our"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the Service.
-    </p>
+      <aside class="summary" aria-labelledby="summary-h">
+        <span class="summary__icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span>
+        <p class="summary__title" id="summary-h">The short version</p>
+        <p>FitForm runs entirely in your browser. Your photos and PDFs are processed on your own device, and nothing is uploaded to a server we run. If you connect Google Drive, FitForm talks directly to Google's servers using your own Google account, and we never see or store that data ourselves.</p>
+      </aside>
 
-    <h2>2. What FitForm does</h2>
-    <p>FitForm is a free, client-side toolkit for working with images and PDFs, including:</p>
-    <ul>
-      <li>Resizing, cropping, compressing, and converting photos and PDF files, performed locally in your browser.</li>
-      <li>An optional "Vault" feature that lets you save and manage documents in a folder inside your own Google Drive, which the Service connects to only after you sign in with Google and grant permission.</li>
-    </ul>
-    <p>
-      The Service is provided as a static, client-side web application. There is no backend server that receives, stores, or processes your files. All image and PDF processing happens locally on your device, using your browser's own resources, including the WebAssembly modules loaded as part of the app.
-    </p>
+      <details class="toc-m">
+        <summary>On this page <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></summary>
+        <ol>
+          <li><a href="#acceptance">Acceptance of these terms</a></li>
+          <li><a href="#what">What FitForm does</a></li>
+          <li><a href="#drive">Google Drive integration</a></li>
+          <li><a href="#content">Your account and content</a></li>
+          <li><a href="#warranty">No warranty</a></li>
+          <li><a href="#liability">Limitation of liability</a></li>
+          <li><a href="#changes">Changes to the Service or these Terms</a></li>
+          <li><a href="#termination">Termination</a></li>
+          <li><a href="#law">Governing law</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ol>
+      </details>
 
-    <h2>3. Google Drive integration</h2>
-    <p>
-      If you choose to connect Google Drive, FitForm requests the narrowest access scope Google Drive offers for third-party apps (<code>drive.file</code>), which limits FitForm to:
-    </p>
-    <ul>
-      <li>files and folders FitForm itself creates in your Drive (e.g. its "FitForm Vault" folder), and</li>
-      <li>files you explicitly pick through Google's own file picker.</li>
-    </ul>
-    <p>
-      FitForm cannot see, list, or modify any other file in your Google Drive. This access is enforced by Google, not merely by how FitForm is written. You can revoke FitForm's access at any time from your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account permissions page</a>, which immediately and completely cuts off the Service's access to your Drive.
-    </p>
+      <article>
+      <section id="acceptance" aria-labelledby="acceptance-h">
+      <h2 id="acceptance-h"><span>Acceptance of these terms</span></h2>
+      <p>
+        By accessing or using FitForm (the "Service"), provided by Somnath Pratihar, an independent student developer based in India
+        ("we", "us", "our"), you agree to be bound by these Terms of Service ("Terms"). If you do not agree, do not use the Service.
+      </p>
+      </section>
 
-    <h2>4. Your account and content</h2>
-    <ul>
-      <li>You are responsible for the files you choose to process or store through the Service, and for maintaining the security of your own Google account.</li>
-      <li>You retain all ownership rights to your files. We claim no ownership over anything you upload, process, or store using FitForm.</li>
-      <li>You agree not to use the Service to process, store, or distribute content that is illegal, infringes on others' rights, or violates Google's own Terms of Service or Acceptable Use Policy for connected apps.</li>
-    </ul>
+      <section id="what" aria-labelledby="what-h">
+      <h2 id="what-h"><span>What FitForm does</span></h2>
+      <p>FitForm is a free, client-side toolkit for working with images and PDFs, including:</p>
+      <ul>
+        <li>Resizing, cropping, compressing, and converting photos and PDF files, performed locally in your browser.</li>
+        <li>An optional "Vault" feature that lets you save and manage documents in a folder inside your own Google Drive, which the Service connects to only after you sign in with Google and grant permission.</li>
+      </ul>
+      <p>
+        The Service is provided as a static, client-side web application. There is no backend server that receives, stores, or processes your files. All image and PDF processing happens locally on your device, using your browser's own resources, including the WebAssembly modules loaded as part of the app.
+      </p>
+      </section>
 
-    <h2>5. No warranty</h2>
-    <p>
-      The Service is provided "as is" and "as available," without warranties of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement. We do not guarantee the Service will be uninterrupted, error-free, or that any file conversion, compression, or storage operation will be lossless or successful. You are responsible for keeping your own backups of important files.
-    </p>
+      <section id="drive" aria-labelledby="drive-h">
+      <h2 id="drive-h"><span>Google Drive integration</span></h2>
+      <p>
+        If you choose to connect Google Drive, FitForm requests the narrowest access scope Google Drive offers for third-party apps (<code>drive.file</code>), which limits FitForm to:
+      </p>
+      <ul>
+        <li>files and folders FitForm itself creates in your Drive (e.g. its "FitForm Vault" folder), and</li>
+        <li>files you explicitly pick through Google's own file picker.</li>
+      </ul>
+      <p>
+        FitForm cannot see, list, or modify any other file in your Google Drive. This access is enforced by Google, not merely by how FitForm is written. You can revoke FitForm's access at any time from your <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener">Google Account permissions page</a>, which immediately and completely cuts off the Service's access to your Drive.
+      </p>
+      </section>
 
-    <h2>6. Limitation of liability</h2>
-    <p>
-      To the fullest extent permitted by law, Somnath Pratihar will not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of data, files, or goodwill, arising from your use of or inability to use the Service.
-    </p>
+      <section id="content" aria-labelledby="content-h">
+      <h2 id="content-h"><span>Your account and content</span></h2>
+      <ul>
+        <li>You are responsible for the files you choose to process or store through the Service, and for maintaining the security of your own Google account.</li>
+        <li>You retain all ownership rights to your files. We claim no ownership over anything you upload, process, or store using FitForm.</li>
+        <li>You agree not to use the Service to process, store, or distribute content that is illegal, infringes on others' rights, or violates Google's own Terms of Service or Acceptable Use Policy for connected apps.</li>
+      </ul>
+      </section>
 
-    <h2>7. Changes to the Service or these Terms</h2>
-    <p>
-      We may modify, suspend, or discontinue the Service, or update these Terms, at any time. Material changes to these Terms will be reflected by updating the "Last updated" date above. Continued use of the Service after changes take effect constitutes acceptance of the revised Terms.
-    </p>
+      <section id="warranty" aria-labelledby="warranty-h">
+      <h2 id="warranty-h"><span>No warranty</span></h2>
+      <p>
+        The Service is provided "as is" and "as available," without warranties of any kind, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, or non-infringement. We do not guarantee the Service will be uninterrupted, error-free, or that any file conversion, compression, or storage operation will be lossless or successful. You are responsible for keeping your own backups of important files.
+      </p>
+      </section>
 
-    <h2>8. Termination</h2>
-    <p>
-      You may stop using the Service at any time, and may disconnect Google Drive access at any time via your Google Account settings. We may restrict or discontinue access to the Service for any user at our discretion, including for violations of these Terms.
-    </p>
+      <section id="liability" aria-labelledby="liability-h">
+      <h2 id="liability-h"><span>Limitation of liability</span></h2>
+      <p>
+        To the fullest extent permitted by law, Somnath Pratihar will not be liable for any indirect, incidental, special, consequential, or punitive damages, or any loss of data, files, or goodwill, arising from your use of or inability to use the Service.
+      </p>
+      </section>
 
-    <h2>9. Governing law</h2>
-    <p>
-      These Terms are governed by the laws of India, without regard to conflict-of-law principles.
-    </p>
+      <section id="changes" aria-labelledby="changes-h">
+      <h2 id="changes-h"><span>Changes to the Service or these Terms</span></h2>
+      <p>
+        We may modify, suspend, or discontinue the Service, or update these Terms, at any time. Material changes to these Terms will be reflected by updating the "Last updated" date above. Continued use of the Service after changes take effect constitutes acceptance of the revised Terms.
+      </p>
+      </section>
 
-    <h2>10. Contact</h2>
-    <p>
-      Questions about these Terms can be sent to <a href="mailto:somnathpratihar363@gmail.com">somnathpratihar363@gmail.com</a>.
-    </p>
+      <section id="termination" aria-labelledby="termination-h">
+      <h2 id="termination-h"><span>Termination</span></h2>
+      <p>
+        You may stop using the Service at any time, and may disconnect Google Drive access at any time via your Google Account settings. We may restrict or discontinue access to the Service for any user at our discretion, including for violations of these Terms.
+      </p>
+      </section>
 
-    <footer>
-      <a href="/privacy.html">Privacy Policy</a>
-      <a href="/">Back to FitForm</a>
-    </footer>
+      <section id="law" aria-labelledby="law-h">
+      <h2 id="law-h"><span>Governing law</span></h2>
+      <p>
+        These Terms are governed by the laws of India, without regard to conflict-of-law principles.
+      </p>
+      </section>
+
+      <section id="contact" aria-labelledby="contact-h">
+      <h2 id="contact-h"><span>Contact</span></h2>
+      <p>
+        Questions about these Terms can be sent to <a href="mailto:somnathpratihar363@gmail.com">somnathpratihar363@gmail.com</a>.
+      </p>
+      </section>
+      </article>
+
+      <nav class="next" aria-label="Continue">
+        <a href="privacy.html">
+          <small>Also read</small>
+          <strong>Privacy Policy <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg></strong>
+        </a>
+        <a href="./">
+          <small>Done here?</small>
+          <strong><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg> Back to FitForm</strong>
+        </a>
+      </nav>
+
+      <div class="doc-foot">
+        <p>&copy; FitForm, by Somnath Pratihar</p>
+        <p>Questions? <a href="mailto:somnathpratihar363@gmail.com">somnathpratihar363@gmail.com</a></p>
+      </div>
+    </main>
   </div>
+
+  <script src="legal.js" defer></script>
 </body>
 </html>

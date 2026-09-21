@@ -27,6 +27,7 @@ import { SizeReductionControl } from './components/SizeReductionControl';
 import { AdvancedPanel } from './components/AdvancedPanel';
 import { PreviewResult } from './components/PreviewResult';
 import { VaultPage } from './components/VaultPage';
+import { LegalLinks } from './components/LegalLinks';
 import { Button } from './components/ui/button';
 import type { LogLine } from './components/LogConsole';
 
@@ -395,6 +396,7 @@ export default function App() {
     <AppShell
       tab={tab}
       onTabChange={setTab}
+      sidebarFooter={<LegalLinks />}
       headerRight={
         <>
           {tab === 'studio' && (

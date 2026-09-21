@@ -225,7 +225,10 @@
     @apply border-primary bg-primary/10;
   }
   .dropzone--compact {
-    @apply gap-1 px-4 py-6;
+    @apply gap-1 px-4 py-7;
+  }
+  .dropzone:focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
   .dropzone__icon {
     @apply flex h-11 w-11 items-center justify-center rounded-full border-2 border-border bg-accent text-accent-foreground;
@@ -238,10 +241,26 @@
   }
 
   .file-row {
-    @apply flex w-full items-center gap-3 rounded-xl border-2 border-border bg-card px-3 py-2.5 shadow-hard-sm;
+    @apply flex w-full flex-wrap items-center gap-x-3 gap-y-2.5 rounded-xl border-2 border-border bg-card px-3 py-2.5 shadow-hard-sm transition-[transform,box-shadow] duration-100 sm:flex-nowrap;
+  }
+  .file-row:hover:not(.file-row--skeleton) {
+    @apply -translate-y-px;
+    box-shadow: 3px 4px 0 0 hsl(var(--shadow-ink));
+  }
+  .file-row--skeleton {
+    @apply animate-pulse;
+  }
+  .file-row--skeleton .file-row__icon {
+    @apply bg-muted;
   }
   .file-row__icon {
-    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 border-border bg-secondary text-secondary-foreground;
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2 border-border bg-secondary text-secondary-foreground;
+  }
+  .file-row__icon--image {
+    @apply bg-primary/15 text-primary;
+  }
+  .file-row__icon--pdf {
+    @apply bg-accent/70 text-accent-foreground;
   }
   .file-row__icon--thumb {
     @apply overflow-hidden p-0;
@@ -250,16 +269,111 @@
     @apply h-full w-full object-cover;
   }
   .file-row__preview-trigger {
-    @apply flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background;
+    @apply flex min-w-0 flex-1 basis-full cursor-pointer items-center gap-3 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background sm:basis-0;
   }
   .file-row__text {
     @apply min-w-0 flex-1;
   }
   .file-row__name {
-    @apply truncate text-sm font-medium text-foreground;
+    @apply truncate text-sm font-semibold text-foreground;
   }
   .file-row__meta {
-    @apply truncate text-xs text-muted-foreground;
+    @apply mt-0.5 flex items-center gap-1.5 truncate text-xs text-muted-foreground;
+  }
+  .file-row__sep {
+    @apply h-1 w-1 shrink-0 rounded-full bg-muted-foreground/50;
+  }
+  /* Phone: the name gets the full row, actions sit under it behind a dashed
+     rule. From sm up they slide back inline to the right of the name. */
+  .file-row__actions {
+    @apply flex w-full shrink-0 items-center gap-1 border-t-2 border-dashed border-border/40 pt-2.5 sm:w-auto sm:border-0 sm:pt-0;
+  }
+  .file-row__studio {
+    @apply mr-auto sm:mr-1;
+  }
+
+  /* vault: signed-out intro, signed-in header bar, uploads, empty state, footer */
+  .vault-intro {
+    @apply mx-auto flex w-full max-w-md flex-col items-center gap-5 rounded-xl border-2 border-border bg-card p-6 text-center shadow-hard-lg sm:p-8;
+  }
+  .vault-intro__badge {
+    @apply flex h-14 w-14 items-center justify-center rounded-full border-2 border-border bg-accent text-accent-foreground shadow-hard-sm;
+  }
+  .vault-intro__lead {
+    @apply mx-auto max-w-sm text-sm leading-relaxed text-muted-foreground;
+  }
+  .vault-points {
+    @apply flex w-full flex-col gap-2 text-left;
+  }
+  .vault-points li {
+    @apply flex items-start gap-3 rounded-lg border-2 border-border/40 bg-background/60 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground;
+  }
+  .vault-points__icon {
+    @apply mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary/15 text-primary;
+  }
+  .vault-points strong {
+    @apply block text-[13px] font-semibold text-foreground;
+  }
+  .vault-consent {
+    @apply text-xs leading-relaxed text-muted-foreground;
+  }
+  .vault-consent a {
+    @apply font-medium text-foreground underline underline-offset-2 hover:text-primary;
+  }
+
+  .vault-bar {
+    @apply flex items-center gap-3 rounded-xl border-2 border-border bg-card px-3.5 py-3 shadow-hard;
+  }
+  .vault-bar__icon {
+    @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border-2 border-border bg-primary text-primary-foreground;
+  }
+  .vault-bar__text {
+    @apply min-w-0 flex-1;
+  }
+  .vault-bar__title {
+    @apply truncate text-lg leading-tight text-foreground;
+    word-spacing: 0.14em; /* Fredoka's default word space reads as "FitFormVault" at this size */
+  }
+  .vault-bar__sub {
+    @apply flex items-center text-xs text-muted-foreground;
+  }
+  .vault-bar__actions {
+    @apply flex shrink-0 items-center gap-1.5;
+  }
+  .upload-row {
+    @apply flex flex-col gap-1.5 rounded-lg border-2 border-border bg-card px-3 py-2 text-xs shadow-hard-sm;
+  }
+  .upload-row--error {
+    @apply border-destructive;
+  }
+  .upload-row__name {
+    @apply truncate font-semibold text-foreground;
+  }
+  .upload-row__error {
+    @apply text-destructive;
+  }
+
+  /* Deliberately borderless: the dashed dropzone right above it is the call to action. */
+  .empty-state.vault-empty {
+    @apply flex flex-col items-center gap-1.5 border-0 bg-transparent py-6;
+  }
+  .empty-state.vault-empty p {
+    @apply max-w-xs text-xs leading-relaxed;
+  }
+
+  .vault-foot {
+    @apply mt-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t-2 border-dashed border-border/40 pt-4;
+  }
+  .vault-foot__note {
+    @apply flex items-start gap-2 text-xs leading-relaxed text-muted-foreground;
+  }
+
+  /* Terms / Privacy links, wherever the app references them */
+  .legal-links {
+    @apply flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground;
+  }
+  .legal-links a {
+    @apply inline-flex items-center gap-1 font-medium underline decoration-border/30 underline-offset-2 transition-colors hover:text-foreground hover:decoration-current;
   }
 
   .vault-preview {
