@@ -11,8 +11,9 @@
 // Services' token client (GIS), which runs entirely in the browser and
 // hands back a short-lived OAuth access token (no client secret involved —
 // public single-page apps like this one are never supposed to hold one).
-// That token lives only in memory for the life of the tab; nothing is
-// persisted to localStorage. Reload the page and you sign in again.
+// That token is cached in this tab's sessionStorage (see below) so a
+// reload doesn't force you to reconnect, but it never touches localStorage
+// and disappears the moment the tab or window is closed.
 //
 // The OAuth Client ID is fixed at build time (DRIVE_CLIENT_ID below) and is
 // not configurable at runtime. It's a public identifier, not a secret, so
@@ -77,6 +78,49 @@ export interface DriveToken {
   accessToken: string;
   /** ms epoch when this token stops being usable */
   expiresAt: number;
+}
+
+/**
+ * sessionStorage key the current Drive access token is cached under.
+ * sessionStorage (unlike localStorage) is scoped to this one tab/window and
+ * is wiped automatically when it's closed, which keeps the token's
+ * lifetime aligned with "this browsing session" rather than persisting it
+ * indefinitely on disk.
+ */
+const TOKEN_STORAGE_KEY = 'fitform:drive-token';
+
+/** Caches the current token in sessionStorage so a page reload can restore it. */
+export function saveTokenToSession(token: DriveToken): void {
+  try {
+    sessionStorage.setItem(TOKEN_STORAGE_KEY, JSON.stringify(token));
+  } catch {
+    /* storage unavailable (private mode, blocked, quota) — token just won't survive a reload */
+  }
+}
+
+/** Reads back a cached token, if any, discarding it if it's already expired. */
+export function loadTokenFromSession(): DriveToken | null {
+  try {
+    const raw = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+    if (!raw) return null;
+    const token = JSON.parse(raw) as DriveToken;
+    if (!token?.accessToken || typeof token.expiresAt !== 'number' || token.expiresAt <= Date.now()) {
+      sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+      return null;
+    }
+    return token;
+  } catch {
+    return null;
+  }
+}
+
+/** Clears the cached token, e.g. on sign-out. */
+export function clearTokenFromSession(): void {
+  try {
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+  } catch {
+    /* nothing to clear */
+  }
 }
 
 export type TokenClientHandle = {

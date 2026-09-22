@@ -55,7 +55,7 @@
     <aside class="summary summary--rail" aria-labelledby="summary-rail-h">
       <span class="summary__icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span>
       <p class="summary__title" id="summary-rail-h">The short version</p>
-      <p>FitForm is a static app that runs entirely in your browser. Your photos and PDFs are resized, compressed, and converted locally, and they are never uploaded to any server we operate. If you connect Google Drive, FitForm talks directly to Google's API from your browser using a short-lived, in-memory access token, and we do not receive, store, or have access to your Drive files or their contents.</p>
+      <p>FitForm is a static app that runs entirely in your browser. Your photos and PDFs are resized, compressed, and converted locally, and they are never uploaded to any server we operate. If you connect Google Drive, FitForm talks directly to Google's API from your browser using a short-lived access token cached only in this tab's session storage, and we do not receive, store, or have access to your Drive files or their contents.</p>
     </aside>
 
     <main class="doc" id="main-content">
@@ -66,7 +66,7 @@
       <aside class="summary" aria-labelledby="summary-h">
         <span class="summary__icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span>
         <p class="summary__title" id="summary-h">The short version</p>
-        <p>FitForm is a static app that runs entirely in your browser. Your photos and PDFs are resized, compressed, and converted locally, and they are never uploaded to any server we operate. If you connect Google Drive, FitForm talks directly to Google's API from your browser using a short-lived, in-memory access token, and we do not receive, store, or have access to your Drive files or their contents.</p>
+        <p>FitForm is a static app that runs entirely in your browser. Your photos and PDFs are resized, compressed, and converted locally, and they are never uploaded to any server we operate. If you connect Google Drive, FitForm talks directly to Google's API from your browser using a short-lived access token cached only in this tab's session storage, and we do not receive, store, or have access to your Drive files or their contents.</p>
       </aside>
 
       <details class="toc-m">
@@ -89,8 +89,7 @@
       <h2 id="who-h"><span>Who we are</span></h2>
       <p>
         This Privacy Policy explains how FitForm ("the Service", "we", "us") handles information when you use it.
-        FitForm is an independent, student-run project operated by Somnath Pratihar, based in India. For privacy questions, contact
-        <a href="mailto:somnathpratihar363@gmail.com">somnathpratihar363@gmail.com</a>.
+        FitForm is an independent, free project. For privacy questions, see the Contact section below.
       </p>
       </section>
 
@@ -118,7 +117,7 @@
       </p>
       <h3>Sign-in</h3>
       <p>
-        FitForm uses Google Identity Services (Google's own sign-in library) to request an OAuth access token directly from Google, from inside your browser. There is no server-side component to this sign-in. No client secret exists, and no authentication data passes through infrastructure we control.
+        FitForm uses Google Identity Services (Google's own sign-in library) to request an OAuth access token directly from Google, from inside your browser. There is no server-side component to this sign-in. No client secret exists, and no authentication data passes through infrastructure we control. The resulting access token is cached in this browser tab's <code>sessionStorage</code> so that reloading the page keeps you signed in; it is never written to <code>localStorage</code> or any other longer-lived storage, and it disappears automatically when you close the tab or window.
       </p>
       <h3>Scope of access</h3>
       <p>
@@ -138,8 +137,8 @@
         <tbody>
           <tr>
             <td data-label="Data">Google OAuth access token</td>
-            <td data-label="Where it lives">In memory, in your browser tab only</td>
-            <td data-label="Retention">Never written to disk or localStorage; discarded when you close or reload the tab, and expires on its own within about an hour</td>
+            <td data-label="Where it lives">Your browser's <code>sessionStorage</code>, scoped to this one tab/window</td>
+            <td data-label="Retention">Never written to <code>localStorage</code> or disk; cleared automatically when you close the tab or window, and expires on its own within about an hour regardless</td>
           </tr>
           <tr>
             <td data-label="Data">ID of your "FitForm Vault" folder</td>
@@ -166,7 +165,7 @@
       <section id="cookies" aria-labelledby="cookies-h">
       <h2 id="cookies-h"><span>Cookies and local storage</span></h2>
       <p>
-        FitForm does not use tracking cookies. It uses your browser's <code>localStorage</code> only for the cached Vault folder ID described above. It is never used to identify or track you across other sites.
+        FitForm does not use tracking cookies. It uses your browser's <code>localStorage</code> only for the cached Vault folder ID described above, and your browser's <code>sessionStorage</code> only for the cached Google access token described above, scoped to a single tab/window. Neither is ever used to identify or track you across other sites.
       </p>
       </section>
 
@@ -197,7 +196,7 @@
       <section id="contact" aria-labelledby="contact-h">
       <h2 id="contact-h"><span>Contact</span></h2>
       <p>
-        Questions about this Privacy Policy can be sent to <a href="mailto:somnathpratihar363@gmail.com">somnathpratihar363@gmail.com</a>.
+        Questions about this Privacy Policy can be directed to the FitForm team through the app itself.
       </p>
       </section>
       </article>
@@ -214,8 +213,7 @@
       </nav>
 
       <div class="doc-foot">
-        <p>&copy; FitForm, by Somnath Pratihar</p>
-        <p>Questions? <a href="mailto:somnathpratihar363@gmail.com">somnathpratihar363@gmail.com</a></p>
+        <p>&copy; FitForm</p>
       </div>
     </main>
   </div>

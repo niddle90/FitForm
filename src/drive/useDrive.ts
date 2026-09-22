@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createTokenClient, DRIVE_CLIENT_ID, purgeLegacyClientIdOverride, type DriveToken, type TokenClientHandle } from './auth';
+import {
+  createTokenClient,
+  DRIVE_CLIENT_ID,
+  purgeLegacyClientIdOverride,
+  saveTokenToSession,
+  loadTokenFromSession,
+  clearTokenFromSession,
+  type DriveToken,
+  type TokenClientHandle,
+} from './auth';
 import {
   ensureVaultFolder,
   listFiles,
@@ -43,11 +52,13 @@ export function useDrive() {
         if (!tokenClientRef.current) return;
         const renewed = await tokenClientRef.current.requestToken({ silent: true });
         tokenRef.current = renewed;
+        saveTokenToSession(renewed);
         scheduleRenew(renewed);
       } catch {
         // Silent renewal failed (session expired, or the browser blocked
         // the background request) — fall back to asking the person to
         // reconnect rather than failing their next action opaquely.
+        clearTokenFromSession();
         setStatus('signed-out');
         setError('Your Google session needs to be refreshed — click Connect again.');
       }
@@ -76,6 +87,7 @@ export function useDrive() {
       }
       const token = await tokenClientRef.current.requestToken();
       tokenRef.current = token;
+      saveTokenToSession(token);
       scheduleRenew(token);
       const folderId = await ensureVaultFolder(token.accessToken);
       folderIdRef.current = folderId;
@@ -92,15 +104,45 @@ export function useDrive() {
     tokenClientRef.current?.signOut(tokenRef.current?.accessToken ?? null);
     tokenRef.current = null;
     folderIdRef.current = null;
+    clearTokenFromSession();
     setFiles([]);
     setStatus('signed-out');
   }, []);
 
+  // On mount, try to pick up a still-valid token cached in this tab's
+  // sessionStorage (e.g. from before a reload) and reflect it in the UI
+  // immediately, rather than dropping back to "signed-out" and making the
+  // person reconnect. Falls back to signed-out silently if the cached
+  // token turns out to be stale or Drive rejects it.
   useEffect(() => {
     purgeLegacyClientIdOverride();
+
+    const cached = loadTokenFromSession();
+    if (cached) {
+      setStatus('connecting');
+      (async () => {
+        try {
+          if (!tokenClientRef.current) {
+            tokenClientRef.current = await createTokenClient(DRIVE_CLIENT_ID);
+          }
+          tokenRef.current = cached;
+          scheduleRenew(cached);
+          const folderId = await ensureVaultFolder(cached.accessToken);
+          folderIdRef.current = folderId;
+          setStatus('signed-in');
+          await refreshFiles();
+        } catch {
+          clearTokenFromSession();
+          tokenRef.current = null;
+          setStatus('signed-out');
+        }
+      })();
+    }
+
     return () => {
       if (renewTimerRef.current) window.clearTimeout(renewTimerRef.current);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const withToken = useCallback(async <T,>(fn: (token: string) => Promise<T>): Promise<T> => {
@@ -112,6 +154,7 @@ export function useDrive() {
         // Token died earlier than expected — try one silent renew, then retry once.
         const renewed = await tokenClientRef.current.requestToken({ silent: true });
         tokenRef.current = renewed;
+        saveTokenToSession(renewed);
         scheduleRenew(renewed);
         return fn(renewed.accessToken);
       }
