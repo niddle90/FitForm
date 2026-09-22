@@ -6,14 +6,22 @@
 
 <p align="center">
   A client-side image and PDF workspace for resizing, cropping, compression,
-  format conversion, printing, and document storage.
+  format conversion, printing, and document storage — all in the browser.
 </p>
 
 <p align="center">
-  <a href="https://fitform.slek.dev/">Live application</a>
-  &nbsp;&nbsp;|&nbsp;&nbsp;
+  <img alt="License" src="https://img.shields.io/badge/license-MIT-blue.svg">
+  <img alt="Node" src="https://img.shields.io/badge/node-%E2%89%A518.17-339933?logo=node.js&logoColor=white">
+  <img alt="Vite" src="https://img.shields.io/badge/build-Vite-646CFF?logo=vite&logoColor=white">
+  <img alt="TypeScript" src="https://img.shields.io/badge/lang-TypeScript-3178C6?logo=typescript&logoColor=white">
+  <img alt="Backend" src="https://img.shields.io/badge/backend-none-lightgrey">
+</p>
+
+<p align="center">
+  <a href="https://fitform.slek.dev/"><strong>Open FitForm</strong></a>
+  &nbsp;·&nbsp;
   <a href="https://fitform.slek.dev/privacy.html">Privacy</a>
-  &nbsp;&nbsp;|&nbsp;&nbsp;
+  &nbsp;·&nbsp;
   <a href="https://fitform.slek.dev/terms.html">Terms</a>
 </p>
 
@@ -21,544 +29,208 @@
 
 ## Overview
 
-FitForm is a browser based image and PDF toolkit built around one simple idea:
+FitForm is a browser-based image and PDF toolkit built around one idea: give
+people precise control over their files without making them upload those
+files to a processing server.
 
-**Give people precise control over their files without making them upload those
-files to a processing server.**
+It pairs a clean visual workflow with a processing engine that handles image
+resizing, cover cropping, target-size compression, format conversion, PDF
+page extraction, A4 print preparation, and JPEG-to-PDF creation — entirely
+client-side. Expensive work runs in a Web Worker, so the interface stays
+responsive even on large files.
 
-It combines a clean visual workflow with a processing engine capable of handling
-image resizing, cover cropping, target-size compression, format conversion,
-PDF page extraction, A4 print preparation, and JPEG-to-PDF creation.
+An optional **Vault** lets you save documents to your own Google Drive,
+so FitForm never needs a hosted database or file storage of its own.
 
-The application is completely static. There is no FitForm application server
-sitting between the browser and the files being processed. The main processing
-pipeline runs locally in the browser, with expensive work moved into a Web
-Worker so the interface can remain responsive.
+## How it works
 
-FitForm also includes an optional Vault. Vault uses the user's own Google Drive
-as the storage layer, allowing documents to be saved without introducing a
-FitForm hosted database or file storage service.
+A file enters the pipeline, its metadata gets inspected, the selected
+operations are assembled in order, and the engine runs them one after
+another. The result comes back to the interface with its final dimensions,
+format, and file size.
 
-<p align="center">
-  <a href="https://fitform.slek.dev/">
-    <strong>Open FitForm</strong>
-  </a>
-</p>
-
-## What FitForm does
-
-FitForm is organized around a processing pipeline rather than a collection of
-unrelated one-off tools.
-
-A file enters the application, its metadata is inspected, the selected
-operations are assembled into a pipeline, and the processing engine executes
-those operations in order. The result is then returned to the interface with
-its final dimensions, format, and file size.
-
-This makes it possible to combine operations such as:
-
-```text
-Resize -> Crop -> Compress -> Convert -> Print/PDF
+```mermaid
+flowchart LR
+    A[Browser UI] --> B[Pipeline config]
+    B --> C[Engine client]
+    C --> D[Web Worker]
+    D --> E[Imaging engine]
+    E --> F[Resize]
+    E --> G[Crop]
+    E --> H[Compress]
+    E --> I[Convert]
+    E --> J[PDF render / create]
+    E --> K[Print layout]
+    F & G & H & I & J & K --> L[Preview, metadata, download]
 ```
 
-The exact pipeline is determined by the options selected by the user.
+The interface and the processing engine are kept deliberately separate: the
+React app owns pipeline controls, file selection, and result presentation,
+while the [`imaging`](./imaging) package owns the actual image and PDF
+operations. They only communicate through a single Web Worker — which
+matters because a target-size JPEG search can take several encoding passes,
+and PDF rendering can be memory-hungry, so neither should ever block the
+main thread.
 
-### Resize
+## Features
 
-Resize changes an image to a specific width and height.
+| Feature | What it does |
+|---|---|
+| **Resize** | Scales to an exact width/height using Triangle, Catmull-Rom, Mitchell, Lanczos3, HQX, or Magic Kernel resampling. |
+| **Crop** | Cover-style crop against the decoded pixels, anchored to center, top, bottom, left, or right. |
+| **Compress to a target size** | Works backwards from a file size (e.g. "under 200 KB") instead of a quality slider — narrowing quality, scale, chroma subsampling, and progressive encoding until it fits. |
+| **Format conversion** | Decode/re-encode across JPG, PNG, WebP, BMP, and TGA. |
+| **PDF → image** | Extract any page of a PDF as an image, then run it through the rest of the pipeline. |
+| **Images → PDF** | Assemble processed JPEGs into a single PDF, no server required. |
+| **A4 print prep** | Lays an image out for A4 printing at 300 DPI, with margins, alignment, and sizing handled for you. |
 
-The imaging engine supports multiple resampling methods, including:
-
-- Triangle
-- Catmull-Rom
-- Mitchell
-- Lanczos3
-- HQX
-- Magic Kernel variants
-
-Different resampling methods have different characteristics when reducing or
-enlarging images. FitForm exposes these choices so the resize operation is not
-limited to a single interpolation method.
-
-### Crop
-
-Crop uses the requested output dimensions as the target frame and performs a
-cover-style crop against the decoded image pixels.
-
-The crop can be positioned using anchors such as:
-
-- Center
-- Top
-- Bottom
-- Left
-- Right
-
-This is useful when an image needs to fit an exact aspect ratio without
-stretching.
-
-Cropping is performed as part of the processing pipeline, so it can be
-combined with resizing and compression rather than requiring a separate export
-and re-upload cycle.
-
-### Compress to a target size
-
-Instead of asking for an arbitrary quality number, FitForm can work backwards
-from a target file size.
-
-For JPEG compression, the imaging engine searches for an encoding that fits
-the requested size. It evaluates different quality settings and progressively
-narrows the search rather than relying on a single fixed quality value.
-
-The compression system can use:
-
-- A browser Canvas based encoder
-- A bundled WebAssembly JPEG optimization engine
-- Quality bounds
-- Image scale reduction when necessary
-- Chroma subsampling
-- Progressive JPEG encoding
-
-This is particularly useful for workflows where the requirement is expressed
-as "make this image smaller than 200 KB" rather than "use JPEG quality 70".
-
-### Format conversion
-
-FitForm can convert between:
-
-- JPG
-- PNG
-- WebP
-- BMP
-- TGA
-
-Conversion is implemented as a decode and re-encode operation. The processing
-engine keeps format handling separate from the application interface, allowing
-the same imaging functionality to be used by the browser pipeline and the
-Node based test environment.
-
-### PDF to image
-
-A PDF can be opened and a page can be extracted as an image.
-
-PDF rendering is handled through the browser imaging layer rather than by
-sending the document to a remote conversion service. The interface exposes
-page selection so a specific page can be brought into the image workflow.
-
-Once extracted, that page can be resized, cropped, compressed, converted, or
-prepared for printing like any other image.
-
-### Images to PDF
-
-JPEG images can be assembled into a PDF document.
-
-This makes it possible to take processed images and create a compact document
-without depending on a server side PDF generator.
-
-### A4 print preparation
-
-FitForm can prepare an image for A4 printing at 300 DPI.
-
-The print layout stage handles:
-
-- A4 page dimensions
-- Print resolution
-- Margins
-- Image sizing
-- Alignment
-- Output quality
-
-The result is a print-oriented canvas that can then be exported as part of
-the final workflow.
-
-## How the processing engine works
-
-The user interface and the processing engine are intentionally separated.
-
-The React application is responsible for the interface, pipeline controls,
-file selection, progress display, and result presentation.
-
-The `imaging` package contains the actual image and PDF operations.
-
-The application communicates with that package through a single Web Worker.
-
-```text
-Browser UI
-    |
-    v
-Pipeline configuration
-    |
-    v
-Engine client
-    |
-    v
-Web Worker
-    |
-    v
-Imaging engine
-    |
-    +-- Resize
-    +-- Crop
-    +-- Compress
-    +-- Convert
-    +-- PDF rendering
-    +-- Print layout
-    +-- PDF creation
-    |
-    v
-Processed file
-    |
-    v
-Preview, metadata, download
-```
-
-The worker boundary is important because image compression and PDF rendering can
-be computationally expensive.
-
-A target-size JPEG compression may require multiple encoding attempts while
-the engine searches for an appropriate quality setting. PDF rendering can also
-require substantial CPU and memory, especially for large pages.
-
-Keeping this work away from the main browser thread prevents these operations
-from unnecessarily blocking the interface.
-
-## The imaging package
-
-The `imaging/` directory is a standalone TypeScript package used by FitForm.
-
-It contains the reusable processing layer rather than application-specific UI
-code.
-
-Its responsibilities include:
-
-```text
-imaging/
-|
-+-- src/
-|   +-- compress.ts
-|   +-- convert/
-|   +-- pdfToImages.ts
-|   +-- jpegsToPdf.ts
-|   +-- printLayout.ts
-|   +-- jpegopt-engine.ts
-|   +-- browser codecs
-|   +-- node codecs
-|
-+-- wasm/
-|   +-- jpegopt WebAssembly engine
-|
-+-- native/
-|   +-- source for rebuilding the JPEG optimization core
-|
-+-- test/
-    +-- imaging engine tests
-```
-
-The package has separate browser and Node entry points. This allows the same
-core processing concepts to be exercised in the browser application and in
-automated tests without coupling the UI to implementation details.
-
-It is included in the repository as a local npm dependency:
-
-```json
-"imaging": "file:./imaging"
-```
-
-The application therefore imports the package through its public interface
-instead of reaching directly into its internal source files.
+Because every operation lives in the same pipeline, they compose freely —
+resize into a crop, compress the result, convert the format, and hand it
+straight to print or PDF export, without exporting and re-importing between
+steps.
 
 ## WebAssembly and codecs
 
-Several image and PDF operations are powered by WebAssembly.
+Several operations are powered by WebAssembly: browser-compatible codecs for
+JPEG, PNG, and WebP, PDFium for PDF rendering, and a native JPEG
+optimization core (see [`imaging/native`](./imaging/native)) compiled to
+WASM for the target-size compression path. The binaries ship as static
+assets and load on demand — no native executable or backend required.
 
-FitForm uses browser compatible codec implementations for formats such as
-JPEG, PNG, and WebP, together with PDFium based PDF rendering.
+## The `imaging` package
 
-The JPEG compression path also includes a native optimization core compiled
-to WebAssembly. This gives the browser access to a dedicated JPEG compression
-implementation without requiring a native executable on the user's device.
+[`imaging/`](./imaging) is a standalone TypeScript package with its own
+browser and Node entry points, so the same processing code that runs in the
+app is also exercised directly in tests:
 
-The WebAssembly binaries are served as static assets and loaded by the worker
-when the corresponding processing functionality is initialized.
+```text
+imaging/
+├── src/
+│   ├── compress.ts, convert/, pdfToImages.ts, jpegsToPdf.ts, printLayout.ts
+│   ├── jpegopt-engine.ts
+│   └── browser + node codec implementations
+├── wasm/      compiled jpegopt WebAssembly engine
+├── native/    C source for rebuilding the JPEG optimization core
+└── test/      imaging engine tests
+```
 
-The application does not need a backend to execute these operations.
+It's consumed as a local dependency (`"imaging": "file:./imaging"`), and the
+app only ever imports its public interface — never its internals.
 
 ## Privacy model
 
-Privacy is a core part of the architecture rather than a separate upload
-setting.
+Privacy is architectural here, not a checkbox in settings.
 
-### Local processing
+**Main pipeline:** your file never leaves the browser. There's no FitForm
+upload endpoint in the image/PDF path — processing happens locally, which
+matters for photos, scanned documents, and other files you'd rather not send
+to a third-party server.
 
-For the main image and PDF tools, the selected files are processed in the
-browser.
-
-The normal workflow is:
-
-```text
-Your file
-   |
-   v
-Your browser
-   |
-   v
-Local processing
-   |
-   v
-Result
-```
-
-There is no FitForm upload endpoint involved in the image and PDF pipeline.
-
-This is useful for photographs, scanned documents, identity documents, and
-other files that users may not want to send to a third-party processing
-server.
-
-### Vault
-
-Vault is an optional part of FitForm.
-
-When enabled, it uses Google Drive as the storage layer. Files are stored in
-the user's own Drive rather than in FitForm infrastructure.
-
-FitForm requests Google's `drive.file` scope. This limits the application's
-Drive access to files created by the application and files the user explicitly
-opens through Google's file picker.
-
-The Google access token is kept in memory for the current page session. It is
-not stored in `localStorage` or `sessionStorage`.
-
-FitForm does not operate a separate backend solely for Vault.
-
-## Static architecture
-
-FitForm is designed to be deployable as a static website.
-
-The production application consists of:
-
-- HTML
-- JavaScript
-- CSS
-- WebAssembly assets
-- Static legal pages
-- Client-side application code
-
-There is no requirement for a traditional application server.
-
-A deployment can therefore be hosted through services such as GitHub Pages,
-a static hosting provider, or a custom domain.
-
-The current production deployment is:
-
-https://fitform.slek.dev/
+**Vault:** storage is your own Google Drive, not FitForm infrastructure.
+Access is scoped to `drive.file`, which limits FitForm to files it created
+and files you explicitly opened via Google's picker. The access token lives
+in memory for the page session only — never in `localStorage` or
+`sessionStorage`.
 
 ## Project structure
 
-The repository is divided into a few clear areas:
-
 ```text
 .
-+-- src/
-|   +-- components/       UI and pipeline controls
-|   +-- engine/           Worker based processing bridge
-|   +-- drive/            Google Drive authentication and API access
-|   +-- state/            Pipeline state and configuration
-|   +-- App.tsx           Application composition
-|
-+-- imaging/              Reusable image/PDF processing package
-|
-+-- public/
-|   +-- wasm/             Static WebAssembly assets
-|   +-- fonts/            Self-hosted fonts
-|   +-- privacy.html      Privacy page
-|   +-- terms.html        Terms page
-|
-+-- scripts/              Build and test utilities
-|
-+-- .github/
-|   +-- workflows/        Deployment automation
-|
-+-- index.html
-+-- package.json
-+-- vite.config.ts
+├── src/
+│   ├── components/    UI and pipeline controls
+│   ├── engine/        Worker-based processing bridge
+│   ├── drive/         Google Drive auth and API access
+│   ├── state/         Pipeline state and configuration
+│   └── App.tsx
+├── imaging/           Reusable image/PDF processing package
+├── public/
+│   ├── wasm/          Static WebAssembly assets
+│   ├── fonts/         Self-hosted fonts
+│   ├── privacy.html
+│   └── terms.html
+├── scripts/           Build and test utilities
+└── .github/workflows/ Deployment automation
 ```
 
 ## Getting started
 
-Requirements:
-
-- Node.js 18.17 or newer
-- npm
-
-Install the project:
+Requires Node.js 18.17+ and npm.
 
 ```bash
-npm install
-```
-
-Start the development server:
-
-```bash
-npm run dev
-```
-
-Create a production build:
-
-```bash
-npm run build
-```
-
-Preview the production build locally:
-
-```bash
-npm run preview
+npm install        # installs deps, builds the imaging package
+npm run dev         # start the dev server
+npm run build        # production build
+npm run preview       # preview the production build locally
 ```
 
 ## Testing
-
-FitForm includes tests for both application behavior and the processing
-engine.
-
-Run the complete test suite:
 
 ```bash
 npm test
 ```
 
-The test setup covers three important areas:
+This runs three suites:
 
-### Pipeline behavior
-
-The pipeline tests verify that UI choices are translated into the expected
-processing configuration.
-
-This includes decisions around resizing, cropping, compression, conversion,
-and final output handling.
-
-### Worker lifecycle
-
-The client tests exercise the communication layer between the application and
-the processing worker.
-
-They cover situations such as:
-
-- Worker startup
-- Worker messages
-- Errors
-- Cancellation
-- Worker restart behavior
-
-### Imaging smoke tests
-
-The smoke tests exercise the actual imaging operations, including resizing,
-compression, format conversion, print layout, JPEG to PDF creation, and PDF
-page handling.
-
-This provides a functional check across the processing stack rather than only
-testing individual UI functions.
+- **Pipeline** — verifies UI choices translate into the correct processing
+  configuration (resize, crop, compression, conversion, output handling).
+- **Worker lifecycle** — covers startup, messaging, errors, cancellation,
+  and restart behavior for the engine client.
+- **Imaging smoke tests** — exercises the real imaging operations end to
+  end: resize, compress, convert, print layout, JPEG→PDF, PDF page
+  extraction.
 
 ## Deployment
 
-FitForm can be deployed as a static application.
-
-For the custom domain used by the project:
+FitForm builds to a static `dist/` directory that any static host can serve:
 
 ```bash
 npm run build
 ```
 
-The generated `dist/` directory can then be served by a static hosting
-provider.
-
-For a GitHub Pages project site, provide the repository path when building:
+For a GitHub Pages project site, set the base path first:
 
 ```bash
 VITE_BASE_PATH=/repository-name/ npm run build
 ```
 
-The repository also includes a GitHub Actions workflow for automated
-deployment.
+A GitHub Actions workflow for automated deployment is included under
+[`.github/workflows`](./.github/workflows).
 
 ## Design principles
 
-FitForm is built around a few practical principles.
+- **Local first** — process on-device whenever the browser can do the work.
+- **Pipeline based** — operations compose instead of living as separate tools.
+- **Explicit results** — always show the resulting dimensions and file size.
+- **Responsive processing** — expensive work belongs in a worker, not the UI thread.
+- **Static by default** — deployable without an application backend.
+- **Reusable processing layer** — `imaging` stays independent of the React UI.
 
-### Local first
+## Known limitations
 
-Files should be processed on the device whenever the browser can do the work.
-
-### Pipeline based
-
-Operations should be composable. Resizing, cropping, compression, conversion,
-and output preparation should work together instead of forcing users through
-separate tools.
-
-### Explicit results
-
-The interface exposes the resulting dimensions and file size so users can
-understand what happened to their file.
-
-### Responsive processing
-
-Expensive work belongs in a worker, not on the browser's main UI thread.
-
-### Static by default
-
-The core application should remain deployable without maintaining an
-application backend.
-
-### Reusable processing layer
-
-The imaging functionality is kept independent from the React interface so it
-can be tested and reused separately.
-
-## Current limitations
-
-Some browser and format limitations are inherent to the technologies used:
-
-- TGA files can be generated, but many browsers and operating systems do not
-  provide native TGA previews.
-- Lossy formats such as JPEG and WebP can lose information when they are
-  re-encoded.
-- Large images and high resolution PDF pages can require significant memory.
-- PDF rendering performance depends partly on the device and browser.
-- Vault requires Google authentication and an OAuth client configured for the
-  deployment origin when running a custom deployment.
-- WebAssembly assets add to the size of the static application because the
-  processing engines are shipped to the browser.
+- TGA output isn't natively previewable in most browsers or OSes.
+- Lossy re-encodes (JPEG, WebP) lose information, as always.
+- Large images and high-resolution PDF pages need meaningful memory.
+- PDF rendering speed varies by device and browser.
+- Vault needs an OAuth client configured for your deployment origin if
+  you're self-hosting.
+- WASM codecs add to the static bundle size, since the processing engines
+  ship to the browser.
 
 ## License
 
-FitForm is released under the MIT License.
-
-The repository also contains the `imaging` package, which is independently
-licensed under the MIT License.
-
-See [`LICENSE`](LICENSE) for the full license text.
-
-Third party packages, fonts, WebAssembly modules, and other bundled
-dependencies remain subject to their respective licenses. Their license terms
-are not replaced by the FitForm license.
+FitForm and the bundled `imaging` package are both released under the MIT
+License — see [`LICENSE`](LICENSE). Third-party packages, fonts, and
+WebAssembly modules remain subject to their own licenses.
 
 ## Acknowledgements
 
-FitForm builds on a number of open source projects and browser technologies,
-including React, Vite, Tailwind CSS, Radix UI, jsquash codecs, PDFium, and
-WebAssembly based processing components.
-
-Their respective licenses and notices remain applicable to the components
-they provide.
-
-## Links
-
-- Website: https://fitform.slek.dev/
-- Privacy: https://fitform.slek.dev/privacy.html
-- Terms: https://fitform.slek.dev/terms.html
-- Imaging package: `./imaging`
-- License: [`LICENSE`](LICENSE)
+Built on [React](https://react.dev), [Vite](https://vitejs.dev),
+[Tailwind CSS](https://tailwindcss.com), [Radix UI](https://www.radix-ui.com),
+[jSquash](https://github.com/jamsinclair/jSquash) codecs, and
+[PDFium](https://pdfium.googlesource.com/pdfium/).
 
 ---
 
 <p align="center">
-  <strong>FitForm</strong><br>
-  Process your files locally. Keep control of your documents.
+  <strong>FitForm</strong> — process your files locally, keep control of your documents.
 </p>
