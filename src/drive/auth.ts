@@ -15,12 +15,6 @@
 // reload doesn't force you to reconnect, but it never touches localStorage
 // and disappears the moment the tab or window is closed.
 //
-// Two different sign-in mechanics are used depending on device, see
-// "Popup vs redirect sign-in" further down: GIS's own popup flow on
-// desktop, and a hand-rolled full-page redirect on mobile browsers, where
-// a backgrounded popup tab can get killed for memory before it's able to
-// hand the token back.
-//
 // The OAuth Client ID is fixed at build time (DRIVE_CLIENT_ID below) and is
 // not configurable at runtime. It's a public identifier, not a secret, so
 // it's fine for it to live in client-side code or a public repo. Running
@@ -127,118 +121,6 @@ export function clearTokenFromSession(): void {
   } catch {
     /* nothing to clear */
   }
-}
-
-// ── Popup vs redirect sign-in ───────────────────────────────────────────
-//
-// GIS's default popup flow works by opening a second window/tab for
-// accounts.google.com and posting the result back to the opener once the
-// user finishes there. On desktop that's a real popup window and it's
-// fine. On Android Chromium browsers it's typically just a second
-// *background tab* — and on a low-RAM device, Chromium can reclaim that
-// backgrounded FitForm tab's memory while the user is still on Google's
-// page. When Google then tries to hand the token back, there's no live
-// JavaScript left in the original tab to receive it: reopening the tab
-// just triggers a fresh reload, and the whole sign-in silently goes
-// nowhere. Nothing this app does can stop Chromium from discarding a
-// backgrounded tab.
-//
-// The fix is to never background the tab in the first place: on mobile,
-// sign-in below does a full top-level `window.location` redirect instead
-// of opening a popup. The *same* tab navigates to Google and back, so
-// there's no separate tab sitting in the background for the OS to kill —
-// the tab does fully unload and reload, but everything it needs to finish
-// the flow (the access token) comes back encoded in the URL itself
-// (`consumeRedirectToken`, called on startup), not in any in-memory JS
-// state that a reload would destroy.
-//
-// This does require the redirect URI below to be registered under
-// "Authorized redirect URIs" for this OAuth Client ID in Google Cloud
-// Console (Authorized *JavaScript origins*, already needed for the popup
-// flow, is a separate list and isn't enough on its own).
-
-/** True for mobile browsers, where sign-in uses a redirect instead of a popup (see above). */
-export function isMobileBrowser(): boolean {
-  if (typeof navigator === 'undefined') return false;
-  return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-}
-
-/** Where Google sends the browser back to after a redirect sign-in. Must be an exact match of an "Authorized redirect URI" on the OAuth Client. */
-function driveRedirectUri(): string {
-  return `${window.location.origin}${import.meta.env.BASE_URL}`;
-}
-
-/** sessionStorage key for the CSRF nonce stashed just before redirecting to Google, checked again on the way back. */
-const OAUTH_STATE_KEY = 'fitform:drive-oauth-state';
-
-/**
- * Starts the redirect sign-in flow: navigates the whole tab to Google's
- * OAuth consent screen. Does not return a value — by the time Google
- * responds, this page has been replaced (and, after the round trip,
- * reloaded fresh). The response is picked back up by `consumeRedirectToken`
- * on the next startup.
- */
-export function startRedirectSignIn(clientId: string): void {
-  const state = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
-  try {
-    sessionStorage.setItem(OAUTH_STATE_KEY, state);
-  } catch {
-    /* if sessionStorage is unavailable, the state check on return is just skipped */
-  }
-  const params = new URLSearchParams({
-    client_id: clientId,
-    redirect_uri: driveRedirectUri(),
-    response_type: 'token',
-    scope: DRIVE_FILE_SCOPE,
-    include_granted_scopes: 'true',
-    prompt: 'consent',
-    state,
-  });
-  window.location.assign(`https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`);
-}
-
-export type RedirectTokenResult = { kind: 'token'; token: DriveToken } | { kind: 'error'; message: string } | { kind: 'none' };
-
-/**
- * Call once on startup, before anything else touches Drive state. If the
- * current URL is Google redirecting back from `startRedirectSignIn` (its
- * response comes back as a URL fragment, e.g. `#access_token=...`), this
- * parses it, checks the CSRF state matches what was stashed before
- * redirecting, and — either way — strips the fragment from the address
- * bar immediately so a later page refresh can't re-process a stale one.
- */
-export function consumeRedirectToken(): RedirectTokenResult {
-  if (typeof window === 'undefined' || !window.location.hash) return { kind: 'none' };
-  const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
-  const params = new URLSearchParams(hash);
-  if (!params.has('access_token') && !params.has('error')) return { kind: 'none' };
-
-  // Scrub the fragment regardless of outcome, before anything else can throw.
-  window.history.replaceState(null, '', window.location.pathname + window.location.search);
-
-  let expectedState: string | null = null;
-  try {
-    expectedState = sessionStorage.getItem(OAUTH_STATE_KEY);
-    sessionStorage.removeItem(OAUTH_STATE_KEY);
-  } catch {
-    /* if sessionStorage is unavailable, the state check below is skipped */
-  }
-
-  const error = params.get('error');
-  if (error) {
-    return { kind: 'error', message: params.get('error_description') || error };
-  }
-
-  const returnedState = params.get('state');
-  if (expectedState && returnedState !== expectedState) {
-    return { kind: 'error', message: 'Sign-in response could not be verified — please try connecting again.' };
-  }
-
-  const accessToken = params.get('access_token');
-  if (!accessToken) return { kind: 'error', message: 'Google did not return an access token.' };
-  const expiresInSec = Number(params.get('expires_in') ?? 3600);
-
-  return { kind: 'token', token: { accessToken, expiresAt: Date.now() + expiresInSec * 1000 } };
 }
 
 export type TokenClientHandle = {
