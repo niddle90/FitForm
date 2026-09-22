@@ -79,6 +79,12 @@ a:hover { text-decoration-thickness: 2.5px; }
   max-width: 62rem; margin: 0 auto; height: 3.5rem; padding: 0 1.25rem;
   display: flex; align-items: center; gap: 0.75rem;
 }
+/* Matches the app shell's own header, which steps up to a taller 4rem bar
+   at the same `md` breakpoint (see AppShell.tsx) — keeps the two feeling
+   like one product instead of a static page bolted onto an app. */
+@media (min-width: 48rem) {
+  .bar__in { height: 4rem; padding: 0 1.5rem; }
+}
 .brand-link { display: flex; align-items: center; gap: 0.6rem; color: inherit; text-decoration: none; margin-right: auto; }
 .brand-link:hover { text-decoration: none; }
 .mark { width: 2rem; height: 2rem; border-radius: 50%; box-shadow: 2px 2px 0 0 hsl(var(--shadow-ink)); display: block; flex-shrink: 0; }
@@ -119,8 +125,16 @@ a:hover { text-decoration-thickness: 2.5px; }
 .layout { max-width: 62rem; margin: 0 auto; padding: 2rem 1.25rem 5rem; display: grid; grid-template-columns: minmax(0, 1fr); }
 .side { display: none; }
 @media (min-width: 60rem) {
-  .layout { grid-template-columns: 13.5rem minmax(0, 42rem); gap: 3.5rem; justify-content: center; padding-top: 2.75rem; }
-  .side { display: block; align-self: start; position: sticky; top: 5.5rem; }
+  .layout { grid-template-columns: 14.5rem minmax(0, 42rem); gap: 3rem; justify-content: center; padding-top: 2.75rem; }
+  /* The TOC reads as a floating list at narrower widths already (it's
+     tucked in the margin); from here up it gets real card treatment —
+     border, background, shadow — so it looks like a designed panel
+     rather than text sitting in whitespace. */
+  .side {
+    display: block; align-self: start; position: sticky; top: 5.5rem;
+    padding: 1.1rem 1rem; border: 2px solid hsl(var(--border)); border-radius: 0.9rem;
+    background: hsl(var(--card)); box-shadow: 3px 3px 0 0 hsl(var(--shadow-ink));
+  }
   .toc-m { display: none; }
 }
 
@@ -153,6 +167,19 @@ a:hover { text-decoration-thickness: 2.5px; }
 .toc-m[open] summary .ico { transform: rotate(180deg); }
 .toc-m ol { padding: 0 0.5rem 0.7rem; border-top: 2px dashed hsl(var(--border) / 0.3); padding-top: 0.5rem; }
 
+/* Small eyebrow label above the H1. Hidden on mobile/tablet, where the
+   plain heading already reads fine on its own and there's no room to
+   spare; shown once the page has a real sidebar to balance against. */
+.kicker { display: none; }
+@media (min-width: 60rem) {
+  .kicker {
+    display: inline-flex; align-items: center; gap: 0.45rem; margin: 0 0 0.7rem;
+    font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    color: hsl(var(--primary));
+  }
+  .kicker::before { content: ''; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: hsl(var(--primary)); }
+}
+
 /* ── Document ─────────────────────────────────────────────────────────── */
 .doc { min-width: 0; }
 .doc h1 { font-size: clamp(2rem, 6vw, 2.75rem); line-height: 1.1; margin: 0 0 0.9rem; }
@@ -169,6 +196,12 @@ a:hover { text-decoration-thickness: 2.5px; }
   background: hsl(var(--card)); border: 2px solid hsl(var(--border)); border-radius: 1rem;
   box-shadow: 5px 5px 0 0 hsl(var(--shadow-ink));
 }
+/* Duplicate of the "short version" card, shown only in the wide sticky
+   rail (see the 80rem block below) instead of the inline reading column.
+   Kept as a second, `aria-hidden` element rather than moved via CSS so
+   every narrower tier — including mobile — renders from the exact same
+   markup and CSS path it always has. */
+.summary--rail { display: none; margin: 0; }
 .summary__icon {
   grid-row: 1 / span 2; display: flex; align-items: center; justify-content: center; width: 2.6rem; height: 2.6rem;
   border: 2px solid hsl(var(--border)); border-radius: 50%; background: hsl(var(--accent)); color: hsl(var(--accent-foreground));
@@ -243,6 +276,47 @@ a:hover { text-decoration-thickness: 2.5px; }
   font-size: 0.85rem; color: hsl(var(--muted-foreground)); display: flex; flex-wrap: wrap; gap: 0.4rem 1.5rem; justify-content: space-between;
 }
 .doc-foot p { margin: 0; }
+
+/* ── Wide desktop: sticky "short version" rail ───────────────────────────
+   From 80rem up there's enough room for a third column, so the summary
+   card lifts out of the reading column and becomes a sticky rail on the
+   right — visible the whole time you're scrolling instead of a one-time
+   card you scroll past in the first second. Nothing here needed a markup
+   change: `.doc` still has its plain, DOM-order children exactly as
+   before, and `display: contents` just lets the grid below place each of
+   them individually. That also means every tier below 80rem, and mobile
+   in particular, is completely unaffected — this block only adds rules
+   that a narrower `@media` never evaluates. */
+@media (min-width: 80rem) {
+  .layout {
+    max-width: 78rem;
+    grid-template-columns: 14.5rem minmax(0, 42rem) 17rem;
+    column-gap: 3rem;
+  }
+  /* `.side` and `.doc` stay exactly as they already were at the 60rem tier
+     above — each still just one plain grid item in its own column, so
+     nothing about the TOC or the reading column changes here. The rail
+     is a separate, dedicated element (see `.summary--rail` below) rather
+     than the original `.summary` card relocated into a spanning grid
+     item — spanning it next to `.doc`'s much taller single cell fought
+     the track-sizing algorithm and inflated the row instead of doing
+     nothing, which is the simpler and more robust way to get a sticky
+     third column. */
+  /* Auto-placement gets confused once a third, explicitly-positioned item
+     (the rail) sits between `.side` and `.doc` in the DOM — it pushes
+     `.doc` onto a second row instead of the empty middle cell of row 1 —
+     so every column gets pinned explicitly rather than left to guess. */
+  .side { grid-column: 1; grid-row: 1; }
+  .doc { grid-column: 2; grid-row: 1; }
+  .summary--rail {
+    display: block; grid-column: 3; grid-row: 1; align-self: start;
+    position: sticky; top: 5.5rem;
+  }
+  /* The inline "short version" card is still in the reading column at
+     every width up to here; once the rail copy takes over, hide the
+     inline one so it isn't shown twice. */
+  .doc > .summary { display: none; }
+}
 
 /* ── Print: plain, ink-friendly ───────────────────────────────────────── */
 @media print {

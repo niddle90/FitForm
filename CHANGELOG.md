@@ -1097,3 +1097,33 @@ Desktop (`≥ md`) redesign, mobile untouched:
   Studio (empty/loaded/result/advanced-open/overflow states) and Vault
   (signed-out and signed-in, with a mocked Drive) at 1920, 1440, 1366×650,
   1100, 1024, and 820px, plus a dark-mode pass, in headless Chromium.
+
+**Terms/Privacy pages — bigger desktop redesign (this update):** the earlier
+header-height fix was a small consistency patch; this is the real desktop
+pass, based on "just give me your best professional take." Mobile markup
+and CSS are completely untouched — verified pixel-identical, 390px,
+before/after.
+
+- **Sticky "short version" rail (≥80rem / 1280px).** The "short version"
+  summary card lifts out of the reading column and becomes a sticky panel
+  on the right, visible the whole time you scroll instead of a card you
+  pass in the first few seconds. Implemented as a second, duplicate
+  `<aside class="summary summary--rail">` (CSS-hidden below 80rem; the
+  inline original is CSS-hidden above it) rather than one element moved
+  around, specifically so every narrower tier — mobile included — keeps
+  rendering the exact original markup/CSS path with zero risk of
+  regression. (First attempt used `display: contents` + a spanning grid
+  item to reposition the *original* card; Chromium's track-sizing dumped
+  all the extra height into the first spanned row, blowing a ~500px gap
+  into the page. Abandoned that approach for the duplicate-element one
+  above, which sidesteps row-spanning entirely.)
+- **TOC sidebar is now a real card (≥60rem / 960px)**: border, background,
+  shadow, matching the "notebook sticker" treatment used everywhere else
+  in the app, instead of a bare list sitting in the margin.
+- **Small "Legal" eyebrow label** above the H1, desktop only (≥60rem).
+- **Fixed a pre-existing bug**: `<main>` and a content section both had
+  `id="content"` in terms.html (duplicate IDs); renamed the skip-link
+  target to `#main-content`.
+- **Verified:** mobile (390px) pixel-identical before/after both pages;
+  visually checked 820/1024/1280/1440/1920px and a dark-mode pass in
+  headless Chromium.

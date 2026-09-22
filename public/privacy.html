@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="legal.css" />
 </head>
 <body>
-  <a class="skip" href="#content">Skip to content</a>
+  <a class="skip" href="#main-content">Skip to content</a>
 
   <header class="bar">
     <div class="bar__in">
@@ -48,7 +48,18 @@
       </nav>
     </aside>
 
-    <main class="doc" id="content">
+    <!-- Wide-desktop-only duplicate of the "short version" card below, so
+         it can live in a sticky right rail instead of the reading column.
+         Hidden below 80rem via CSS; the inline copy inside <main> is what
+         every narrower width (including mobile) actually renders. -->
+    <aside class="summary summary--rail" aria-labelledby="summary-rail-h">
+      <span class="summary__icon"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg></span>
+      <p class="summary__title" id="summary-rail-h">The short version</p>
+      <p>FitForm is a static app that runs entirely in your browser. Your photos and PDFs are resized, compressed, and converted locally, and they are never uploaded to any server we operate. If you connect Google Drive, FitForm talks directly to Google's API from your browser using a short-lived, in-memory access token, and we do not receive, store, or have access to your Drive files or their contents.</p>
+    </aside>
+
+    <main class="doc" id="main-content">
+      <p class="kicker">Legal</p>
       <h1>Privacy Policy</h1>
       <p class="updated"><time datetime="2026-09-22">Last updated September 22, 2026</time></p>
 
