@@ -47,13 +47,17 @@ async function driveFetch(token: string, url: string, init: RequestInit = {}): P
 
 /**
  * Finds (or creates, on first use) the single app folder this app keeps all
- * its documents in. Because we only hold the `drive.file` scope, a plain
- * folder search (`mimeType = 'application/vnd.google-apps.folder'`) would
- * find nothing — the scope doesn't grant visibility into folders this app
- * didn't create. So the folder's id is cached locally after creation; if
- * that cache is missing (new browser, cleared storage) we simply create a
- * fresh one. Harmless if it results in more than one "FitForm Vault" folder
- * existing over time — each is independently fine to use.
+ * its documents in.
+ *
+ * The folder's id is cached locally so repeat visits skip a network round
+ * trip, but that cache is just a shortcut, not the source of truth: if it's
+ * missing (new browser, cleared storage) or points at something that no
+ * longer exists, we fall back to searching Drive by name before creating a
+ * new folder. The `drive.file` scope does allow this search to succeed —
+ * it only hides files/folders the app didn't create or hasn't been given
+ * access to, and this app did create its own Vault folder. Searching first
+ * means clearing your browser storage doesn't leave your existing vault
+ * files behind in an orphaned folder the app can no longer find.
  */
 export async function ensureVaultFolder(token: string): Promise<string> {
   const cached = localStorage.getItem('fitform:vault-folder-id');
@@ -68,6 +72,26 @@ export async function ensureVaultFolder(token: string): Promise<string> {
     }
   }
 
+  // No usable cached id — search for a Vault folder this app already
+  // created, rather than assuming there isn't one. If more than one turns
+  // up (e.g. from before this search existed), prefer the most recently
+  // modified so uploads land where the freshest files already are.
+  const searchParams = new URLSearchParams({
+    q: `mimeType = 'application/vnd.google-apps.folder' and name = '${VAULT_FOLDER_NAME}' and trashed = false`,
+    fields: 'files(id,modifiedTime)',
+    orderBy: 'modifiedTime desc',
+    pageSize: '1',
+    spaces: 'drive',
+  });
+  const searchRes = await driveFetch(token, `${DRIVE_API}/files?${searchParams.toString()}`);
+  const searchBody = await searchRes.json();
+  const existing = searchBody.files?.[0]?.id;
+  if (existing) {
+    localStorage.setItem('fitform:vault-folder-id', existing);
+    return existing;
+  }
+
+  // Genuinely nothing found — this really is a first use, so create it.
   const res = await driveFetch(token, `${DRIVE_API}/files?fields=id`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
