@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Play, Loader2, X } from 'lucide-react';
+import { Play, Loader2, X, Crop, Minimize2, ArrowRightLeft } from 'lucide-react';
 
 import { EngineClient, EngineError, type EngineEvent } from './engine/client';
 import type { InspectInfo, ImageFormat, RunResult } from './engine/types';
@@ -396,7 +396,7 @@ export default function App() {
     <AppShell
       tab={tab}
       onTabChange={setTab}
-      sidebarFooter={<LegalLinks />}
+      footer={<LegalLinks />}
       headerRight={
         <>
           {tab === 'studio' && (
@@ -422,10 +422,11 @@ export default function App() {
       {tab === 'vault' ? (
         <VaultPage drive={drive} onOpenInStudio={handleOpenInStudio} />
       ) : (
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 p-4 sm:p-6 lg:flex-row lg:items-start">
-          <div className="flex min-w-0 flex-1 flex-col gap-4">
+        <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 p-4 sm:p-6 lg:flex-row lg:items-start lg:gap-8 lg:px-8 lg:py-8">
+          <div className={`flex min-w-0 flex-1 flex-col gap-4${file && !workingBytes ? ' lg:mx-auto lg:max-w-2xl' : ''}`}>
             {!file ? (
               <div className="hero">
+                <h1 className="hero__title">Get your file the right size</h1>
                 <Dropzone file={file} onFile={handleFile} onClear={handleClearFile} />
                 <p className="hero__sub">Resize, shrink, or convert a photo or PDF, right in your browser. Nothing is uploaded anywhere.</p>
                 {drive.status === 'signed-in' && drive.files.length > 0 && (
@@ -433,6 +434,29 @@ export default function App() {
                     Or pick a file from your Vault
                   </Button>
                 )}
+                <ul className="hero__features">
+                  <li>
+                    <span className="hero__feature-icon">
+                      <Crop size={16} />
+                    </span>
+                    <strong>Resize &amp; crop</strong>
+                    <span>Exact pixels, with a crop you control.</span>
+                  </li>
+                  <li>
+                    <span className="hero__feature-icon">
+                      <Minimize2 size={16} />
+                    </span>
+                    <strong>Shrink to a size</strong>
+                    <span>Compress until it fits a target you set.</span>
+                  </li>
+                  <li>
+                    <span className="hero__feature-icon">
+                      <ArrowRightLeft size={16} />
+                    </span>
+                    <strong>Convert formats</strong>
+                    <span>JPG, PNG, WebP, BMP, TGA, or PDF.</span>
+                  </li>
+                </ul>
               </div>
             ) : (
               <>
@@ -472,69 +496,79 @@ export default function App() {
           </div>
 
           {workingBytes && (
-            <div className="flex w-full flex-col gap-4 lg:w-[380px] lg:shrink-0">
-              <DimensionsControl
-                width={simple.width}
-                height={simple.height}
-                cropAnchor={simple.cropAnchor}
-                cropMode={simple.cropMode}
-                cropOffset={simple.cropOffset}
-                cropRect={simple.cropRect}
-                sourceUrl={sourceKind === 'image' ? sourceUrl : null}
-                sourceWidth={inspectInfo?.width}
-                sourceHeight={inspectInfo?.height}
-                onChange={(patch) => setSimple((s) => ({ ...s, ...patch }))}
-              />
-
-              <ExportTargetControl value={simple.exportTarget} onChange={(exportTarget) => setSimple((s) => ({ ...s, exportTarget }))} />
-
-              {simple.exportTarget === 'pdf' && (
-                <p className="hint-text">
-                  PDF export uses a single JPEG page.
-                  <InfoTip>Turn on "Shrink file size" below to control how large that page, and the PDF, ends up.</InfoTip>
-                </p>
-              )}
-
-              {!hideReduce && (
-                <SizeReductionControl
-                  enabled={simple.reduceSize}
-                  onEnabledChange={(reduceSize) => setSimple((s) => ({ ...s, reduceSize }))}
-                  targetKb={simple.targetKb}
-                  onTargetKbChange={(targetKb) => setSimple((s) => ({ ...s, targetKb }))}
+            // Desktop: a sticky settings rail. The controls scroll inside it
+            // when they outgrow the window, while the Process button stays
+            // pinned underneath so it's always in reach. Below `lg` it's a
+            // plain stacked column, exactly as before.
+            <div
+              aria-label="Settings"
+              className="flex w-full flex-col gap-4 lg:sticky lg:top-24 lg:max-h-[calc(100dvh-7.5rem)] lg:w-[380px] lg:shrink-0"
+            >
+              <div className="rail-scroll flex flex-col gap-4 lg:-mb-4 lg:-mr-2 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pb-6 lg:pr-2">
+                <DimensionsControl
+                  width={simple.width}
+                  height={simple.height}
+                  cropAnchor={simple.cropAnchor}
+                  cropMode={simple.cropMode}
+                  cropOffset={simple.cropOffset}
+                  cropRect={simple.cropRect}
+                  sourceUrl={sourceKind === 'image' ? sourceUrl : null}
+                  sourceWidth={inspectInfo?.width}
+                  sourceHeight={inspectInfo?.height}
+                  onChange={(patch) => setSimple((s) => ({ ...s, ...patch }))}
                 />
-              )}
 
-              {simple.exportTarget === 'same' && reducingNow && (
-                <p className="hint-text">
-                  You'll get a JPG back, even from a PNG or WebP.
-                  <InfoTip>
-                    Shrinking always re-encodes as JPG, the only format that can hit an exact size. Since "Same as original" is selected, that's
-                    what comes back.
-                  </InfoTip>
-                </p>
-              )}
+                <ExportTargetControl value={simple.exportTarget} onChange={(exportTarget) => setSimple((s) => ({ ...s, exportTarget }))} />
 
-              {hideReduce && (
-                <p className="hint-text">
-                  {EXPORT_TARGETS.find((t) => t.value === simple.exportTarget)?.label} can't be shrunk to a target size.
-                  <InfoTip>
-                    This format doesn't use lossy compression, so the export usually comes out larger than the original. Pick JPG or WebP for a
-                    specific file size.
-                  </InfoTip>
-                </p>
-              )}
+                {simple.exportTarget === 'pdf' && (
+                  <p className="hint-text">
+                    PDF export uses a single JPEG page.
+                    <InfoTip>Turn on "Shrink file size" below to control how large that page, and the PDF, ends up.</InfoTip>
+                  </p>
+                )}
 
-              <AdvancedPanel
-                value={simple.advanced}
-                onChange={(patch) => setSimple((s) => ({ ...s, advanced: { ...s.advanced, ...patch } }))}
-                showResizeMethod={!!simple.width !== !!simple.height}
-                showCompressTuning={reducingNow || cropping}
-                showConvertQuality={!locksFormat && simple.exportTarget !== 'same'}
-              />
+                {!hideReduce && (
+                  <SizeReductionControl
+                    enabled={simple.reduceSize}
+                    onEnabledChange={(reduceSize) => setSimple((s) => ({ ...s, reduceSize }))}
+                    targetKb={simple.targetKb}
+                    onTargetKbChange={(targetKb) => setSimple((s) => ({ ...s, targetKb }))}
+                  />
+                )}
 
-              <div className="run-bar">
+                {simple.exportTarget === 'same' && reducingNow && (
+                  <p className="hint-text">
+                    You'll get a JPG back, even from a PNG or WebP.
+                    <InfoTip>
+                      Shrinking always re-encodes as JPG, the only format that can hit an exact size. Since "Same as original" is selected, that's
+                      what comes back.
+                    </InfoTip>
+                  </p>
+                )}
+
+                {hideReduce && (
+                  <p className="hint-text">
+                    {EXPORT_TARGETS.find((t) => t.value === simple.exportTarget)?.label} can't be shrunk to a target size.
+                    <InfoTip>
+                      This format doesn't use lossy compression, so the export usually comes out larger than the original. Pick JPG or WebP for a
+                      specific file size.
+                    </InfoTip>
+                  </p>
+                )}
+
+                <AdvancedPanel
+                  value={simple.advanced}
+                  onChange={(patch) => setSimple((s) => ({ ...s, advanced: { ...s.advanced, ...patch } }))}
+                  showResizeMethod={!!simple.width !== !!simple.height}
+                  showCompressTuning={reducingNow || cropping}
+                  showConvertQuality={!locksFormat && simple.exportTarget !== 'same'}
+                />
+
+              </div>
+
+              <div className="run-bar lg:shrink-0 lg:rounded-xl lg:border-2 lg:border-border lg:bg-card lg:p-2 lg:shadow-hard">
                 <div className="run-row flex gap-2">
-                  <Button className="btn--run" onClick={handleRun} disabled={!canRun}>
+                  <Button className="btn--run lg:border-transparent lg:shadow-none" onClick={handleRun} disabled={!canRun}>
                     {running ? <Loader2 size={16} className="animate-spin" /> : <Play size={15} />}
                     {running ? 'Processing…' : 'Process image'}
                   </Button>

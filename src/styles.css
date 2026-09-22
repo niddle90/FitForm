@@ -188,11 +188,50 @@
     background-size: 28px 28px;
   }
 
+  /* The desktop settings rail scrolls on its own but hides its scrollbar so
+     the cards stay flush with the Process button pinned beneath them. */
+  .rail-scroll {
+    scrollbar-width: none;
+  }
+  .rail-scroll::-webkit-scrollbar {
+    display: none;
+  }
+  /* With no scrollbar to hint at it, the bottom edge fades out instead, so
+     it's clear there's more (e.g. "Advanced") below on shorter screens. The
+     fade sits inside the scroller's own bottom padding, so it only touches
+     content once the rail actually overflows. */
+  @media (min-width: 1024px) {
+    .rail-scroll {
+      -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
+      mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
+    }
+  }
+
   .hero {
-    @apply mx-auto flex w-full max-w-xl flex-col items-center gap-4 py-10 text-center;
+    @apply mx-auto flex w-full max-w-xl flex-col items-center gap-4 py-10 text-center md:max-w-3xl md:gap-5 md:py-14;
   }
   .hero__sub {
-    @apply max-w-sm text-sm leading-relaxed text-muted-foreground;
+    @apply max-w-sm text-sm leading-relaxed text-muted-foreground md:max-w-md;
+  }
+  /* Desktop-only extras: the headline above the dropzone and the three
+     "what can I do here" cards beneath it. Phones keep the plain dropzone. */
+  .hero__title {
+    @apply hidden text-balance text-4xl leading-tight text-foreground md:block;
+  }
+  .hero .dropzone {
+    @apply md:py-14;
+  }
+  .hero__features {
+    @apply mt-4 hidden w-full grid-cols-3 gap-4 text-left md:grid;
+  }
+  .hero__features li {
+    @apply flex flex-col gap-1 rounded-xl border-2 border-border bg-card p-4 text-xs leading-relaxed text-muted-foreground shadow-hard-sm;
+  }
+  .hero__features strong {
+    @apply text-sm font-semibold text-foreground;
+  }
+  .hero__feature-icon {
+    @apply mb-1.5 flex h-9 w-9 items-center justify-center rounded-lg border-2 border-border bg-primary/15 text-primary;
   }
 
   .engine-status {
@@ -295,6 +334,19 @@
   /* vault: signed-out intro, signed-in header bar, uploads, empty state, footer */
   .vault-intro {
     @apply mx-auto flex w-full max-w-md flex-col items-center gap-5 rounded-xl border-2 border-border bg-card p-6 text-center shadow-hard-lg sm:p-8;
+  }
+  /* Desktop: message and call to action on the left, the three reassurances
+     on the right, instead of one tall centered column. */
+  @media (min-width: 768px) {
+    .vault-intro {
+      @apply grid max-w-4xl grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] items-center gap-x-10 gap-y-5 p-10 text-left;
+    }
+    .vault-intro__lead {
+      @apply mx-0;
+    }
+    .vault-intro .vault-consent {
+      @apply text-left;
+    }
   }
   .vault-intro__badge {
     @apply flex h-14 w-14 items-center justify-center rounded-full border-2 border-border bg-accent text-accent-foreground shadow-hard-sm;

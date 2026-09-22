@@ -46,6 +46,38 @@ function NavList({ tab, onSelect }: { tab: AppTab; onSelect: (t: AppTab) => void
   );
 }
 
+/** Desktop tab switcher. Lives in the header from `md` up; below that the Sheet menu carries the same items. */
+function HeaderNav({ tab, onSelect, className }: { tab: AppTab; onSelect: (t: AppTab) => void; className?: string }) {
+  return (
+    <nav
+      aria-label="Primary"
+      className={cn('hidden items-center gap-1 rounded-xl border-2 border-border bg-secondary/70 p-1 md:flex', className)}
+    >
+      {NAV_ITEMS.map((item) => {
+        const Icon = item.icon;
+        const active = tab === item.value;
+        return (
+          <button
+            key={item.value}
+            type="button"
+            onClick={() => onSelect(item.value)}
+            aria-current={active ? 'page' : undefined}
+            className={cn(
+              'flex h-9 items-center gap-2 rounded-lg border-2 px-4 text-sm font-semibold transition-[transform,box-shadow,background-color]',
+              active
+                ? 'border-border bg-primary text-primary-foreground shadow-hard-sm'
+                : 'border-transparent text-muted-foreground hover:bg-card hover:text-foreground',
+            )}
+          >
+            <Icon size={15} className="shrink-0" strokeWidth={2} />
+            {item.label}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
 // Resolved against Vite's base so the logo also loads when the app is
 // deployed under a subpath (e.g. https://user.github.io/FitForm/).
 const LOGO_SRC = `${import.meta.env.BASE_URL}logo.svg`;
@@ -79,29 +111,16 @@ interface AppShellProps {
   tab: AppTab;
   onTabChange: (t: AppTab) => void;
   headerRight?: ReactNode;
-  sidebarFooter?: ReactNode;
+  /** Legal links etc. Shown in the mobile menu and in the desktop page footer. */
+  footer?: ReactNode;
   children: ReactNode;
 }
 
-export function AppShell({ tab, onTabChange, headerRight, sidebarFooter, children }: AppShellProps) {
+export function AppShell({ tab, onTabChange, headerRight, footer, children }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <div className="app-shell">
-      {/* Desktop sidebar */}
-      <aside className="sticky top-0 hidden h-dvh w-56 shrink-0 flex-col border-r-2 border-sidebar-border bg-sidebar md:flex">
-        <Brand />
-        <div className="flex-1 overflow-y-auto py-3">
-          <NavList tab={tab} onSelect={onTabChange} />
-        </div>
-        {sidebarFooter && (
-          <>
-            <Separator />
-            <div className="p-3">{sidebarFooter}</div>
-          </>
-        )}
-      </aside>
-
       {/* Mobile: a single Sheet owns both the trigger and the content, so
           there's exactly one source of truth for open/closed. */}
       <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
@@ -117,29 +136,43 @@ export function AppShell({ tab, onTabChange, headerRight, sidebarFooter, childre
               }}
             />
           </div>
-          {sidebarFooter && (
+          {footer && (
             <>
               <Separator />
-              <div className="p-3">{sidebarFooter}</div>
+              <div className="p-3">{footer}</div>
             </>
           )}
         </SheetContent>
 
         {/* Main column */}
         <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center gap-2 border-b-2 border-border bg-background/90 px-3 backdrop-blur-md sm:px-6">
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu">
-                <Menu size={18} />
-              </Button>
-            </SheetTrigger>
-            <div className="md:hidden">
-              <Wordmark size="sm" />
+          <header className="sticky top-0 z-30 h-14 border-b-2 border-border bg-background/90 backdrop-blur-md md:h-16">
+            <div className="mx-auto flex h-full w-full max-w-7xl items-center gap-2 px-3 sm:px-6 lg:px-8">
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden" aria-label="Open menu">
+                  <Menu size={18} />
+                </Button>
+              </SheetTrigger>
+              <div className="md:hidden">
+                <Wordmark size="sm" />
+              </div>
+              <div className="hidden md:block">
+                <Wordmark />
+              </div>
+              <HeaderNav tab={tab} onSelect={onTabChange} className="md:ml-8" />
+              <div className="ml-auto flex items-center gap-2">{headerRight}</div>
             </div>
-            <div className="ml-auto flex items-center gap-2">{headerRight}</div>
           </header>
 
           <main className="flex-1">{children}</main>
+
+          {/* Desktop footer: takes over the legal links the sidebar used to hold. */}
+          <footer className="hidden border-t-2 border-border/20 md:block">
+            <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-4 px-6 py-4 lg:px-8">
+              <p className="text-xs text-muted-foreground">Photo and PDF tools that run in your browser.</p>
+              {footer}
+            </div>
+          </footer>
         </div>
       </Sheet>
     </div>

@@ -1062,3 +1062,38 @@ rendered in headless Chromium (mocked Drive) in signed-out, signed-in, empty,
 loading, uploading, dark and phone-width states; both legal pages rendered at
 desktop and phone widths in light and dark, including contents highlighting.
 **Not tested:** the live Google sign-in flow.
+
+---
+
+## Desktop layout: header tabs, no sidebar
+
+Desktop (`≥ md`) redesign, mobile untouched:
+
+- **Removed the desktop sidebar.** Studio/Vault switching moved into a
+  segmented control in the header, next to the wordmark. Mobile keeps its
+  existing hamburger + slide-out Sheet menu unchanged — same component,
+  same markup, same breakpoint (`md:hidden` and `hidden md:flex` as before).
+- **Verified byte-for-byte:** screenshotted every mobile view (390×844:
+  empty state, loaded state, menu open, Vault) before and after in headless
+  Chromium and diffed the images pixel-by-pixel. Three of four are
+  identical; the fourth differs only in a 3×2px region (the pulsing
+  "engine status" dot caught mid-animation), confirming the mobile layout
+  itself is unchanged.
+- **Studio page:** the settings rail (Dimensions/Export/Shrink/Advanced/
+  Process) is now a sticky column beside the before/after preview instead
+  of stacking under it, with its own scroll region and a mask-fade at the
+  bottom as a scroll cue when the panel outgrows the viewport height — the
+  Process button stays pinned in view. The empty-state hero grew a headline
+  and a three-item feature summary (Resize & crop / Shrink to a size /
+  Convert formats), desktop-only.
+- **Vault page:** signed-out intro switched to a two-column layout (pitch
+  + CTA on the left, the three trust points on the right). Signed-in view
+  puts the upload dropzone in a sticky side rail next to the file list
+  instead of above it.
+- **New page footer** (`md`+ only) carries the Terms/Privacy links that
+  used to live in the sidebar footer; the mobile Sheet menu keeps its own
+  copy.
+- **Verified:** `tsc -b` and `vite build` both clean; manually exercised
+  Studio (empty/loaded/result/advanced-open/overflow states) and Vault
+  (signed-out and signed-in, with a mocked Drive) at 1920, 1440, 1366×650,
+  1100, 1024, and 820px, plus a dark-mode pass, in headless Chromium.

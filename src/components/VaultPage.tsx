@@ -69,10 +69,10 @@ function VaultIntro({ drive }: { drive: Props['drive'] }) {
   const connecting = drive.status === 'connecting';
   return (
     <section className="vault-intro" aria-labelledby="vault-intro-title">
-      <div className="vault-intro__badge">
+      <div className="vault-intro__badge md:col-start-1 md:row-start-1 md:self-end">
         <Lock size={24} strokeWidth={2.25} />
       </div>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5 md:col-start-1 md:row-start-2 md:self-start">
         <h2 id="vault-intro-title" className="text-balance text-2xl leading-tight text-foreground">
           Keep your documents in your own Drive
         </h2>
@@ -81,7 +81,7 @@ function VaultIntro({ drive }: { drive: Props['drive'] }) {
         </p>
       </div>
 
-      <ul className="vault-points">
+      <ul className="vault-points md:col-start-2 md:row-span-3 md:row-start-1 md:self-center">
         <li>
           <span className="vault-points__icon">
             <FolderLock size={15} />
@@ -111,7 +111,7 @@ function VaultIntro({ drive }: { drive: Props['drive'] }) {
         </li>
       </ul>
 
-      <div className="flex w-full flex-col items-center gap-2.5">
+      <div className="flex w-full flex-col items-center gap-2.5 md:col-start-1 md:row-start-3 md:items-start md:self-start">
         <Button size="lg" className="w-full sm:w-auto sm:min-w-56" onClick={drive.connect} disabled={connecting}>
           {connecting ? (
             <>
@@ -180,7 +180,7 @@ export function VaultPage({ drive, onOpenInStudio }: Props) {
   }, [drive.files]);
 
   return (
-    <div className="vault mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6 sm:px-6 sm:py-8">
+    <div className="vault mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6 sm:px-6 sm:py-8 lg:max-w-7xl lg:px-8">
       {drive.error && (
         <div className="callout callout--error" role="alert">
           <AlertTriangle size={15} className="mt-px shrink-0" />
@@ -220,165 +220,173 @@ export function VaultPage({ drive, onOpenInStudio }: Props) {
             </div>
           </header>
 
-          <div
-            className={`dropzone dropzone--compact${dragOver ? ' dropzone--active' : ''}`}
-            role="button"
-            tabIndex={0}
-            aria-label="Upload files to your vault"
-            onClick={() => inputRef.current?.click()}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                inputRef.current?.click();
-              }
-            }}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onDrop={(e) => {
-              e.preventDefault();
-              setDragOver(false);
-              handleFiles(e.dataTransfer.files);
-            }}
-          >
-            <div className="dropzone__icon">
-              <CloudUpload size={22} />
-            </div>
-            <p className="dropzone__title">{dragOver ? 'Drop to upload' : 'Drop files here, or click to upload'}</p>
-            <p className="dropzone__hint">Any file type. They’re saved to your FitForm Vault folder.</p>
-            <input ref={inputRef} type="file" multiple onChange={(e) => handleFiles(e.target.files)} />
-          </div>
-
-          {drive.uploads.length > 0 && (
-            <div className="flex flex-col gap-2" aria-live="polite">
-              {drive.uploads.map((u) => (
-                <div className={`upload-row${u.error ? ' upload-row--error' : ''}`} key={u.id}>
-                  <span className="upload-row__name">{u.name}</span>
-                  {u.error ? (
-                    <span className="upload-row__error">{u.error}</span>
-                  ) : (
-                    <Progress value={Math.round(u.progress * 100)} />
-                  )}
+          {/* Below `lg` this is just the same stack as before (upload, then
+              files). On desktop the upload panel becomes a sticky rail beside
+              the file list. */}
+          <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-8">
+            <div className="flex flex-col gap-5 lg:sticky lg:top-24 lg:col-start-2 lg:row-start-1">
+              <div
+                className={`dropzone dropzone--compact${dragOver ? ' dropzone--active' : ''}`}
+                role="button"
+                tabIndex={0}
+                aria-label="Upload files to your vault"
+                onClick={() => inputRef.current?.click()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    inputRef.current?.click();
+                  }
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setDragOver(true);
+                }}
+                onDragLeave={() => setDragOver(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setDragOver(false);
+                  handleFiles(e.dataTransfer.files);
+                }}
+              >
+                <div className="dropzone__icon">
+                  <CloudUpload size={22} />
                 </div>
-              ))}
-            </div>
-          )}
-
-          <div className="flex flex-col gap-2.5">
-            {drive.loadingFiles && drive.files.length === 0 ? (
-              <>
-                {[0, 1, 2].map((i) => (
-                  <div className="file-row file-row--skeleton" key={i} aria-hidden="true">
-                    <div className="file-row__icon" />
-                    <div className="flex flex-1 flex-col gap-2">
-                      <div className="h-3 w-2/5 rounded bg-muted" />
-                      <div className="h-2.5 w-1/4 rounded bg-muted" />
-                    </div>
-                  </div>
-                ))}
-                <span className="sr-only">Loading your files…</span>
-              </>
-            ) : drive.files.length === 0 ? (
-              <div className="empty-state vault-empty">
-                <FolderLock size={26} className="text-muted-foreground" />
-                <p className="font-semibold text-foreground">Your vault is empty</p>
-                <p>Drop a file above and it will show up here, ready to open in Studio.</p>
+                <p className="dropzone__title">{dragOver ? 'Drop to upload' : 'Drop files here, or click to upload'}</p>
+                <p className="dropzone__hint">Any file type. They’re saved to your FitForm Vault folder.</p>
+                <input ref={inputRef} type="file" multiple onChange={(e) => handleFiles(e.target.files)} />
               </div>
-            ) : (
-              drive.files.map((f) => {
-                const kind = fileKind(f);
-                const KindIcon = KIND_ICON[kind];
-                const hasThumb = !!f.thumbnailLink && kind === 'image';
-                return (
-                  <div className="file-row" key={f.id}>
-                    <div
-                      role="button"
-                      tabIndex={0}
-                      className="file-row__preview-trigger"
-                      onClick={() => renamingId !== f.id && setPreviewFile(f)}
-                      onKeyDown={(e) => {
-                        if (renamingId === f.id) return;
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setPreviewFile(f);
-                        }
-                      }}
-                      aria-label={`Preview ${f.name}`}
-                    >
-                      <div className={`file-row__icon file-row__icon--${kind}${hasThumb ? ' file-row__icon--thumb' : ''}`}>
-                        {hasThumb ? <img src={f.thumbnailLink} alt="" loading="lazy" /> : <KindIcon size={18} />}
+
+              {drive.uploads.length > 0 && (
+                <div className="flex flex-col gap-2" aria-live="polite">
+                  {drive.uploads.map((u) => (
+                    <div className={`upload-row${u.error ? ' upload-row--error' : ''}`} key={u.id}>
+                      <span className="upload-row__name">{u.name}</span>
+                      {u.error ? (
+                        <span className="upload-row__error">{u.error}</span>
+                      ) : (
+                        <Progress value={Math.round(u.progress * 100)} />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+            </div>
+
+            <div className="flex flex-col gap-2.5 lg:col-start-1 lg:row-start-1">
+              {drive.loadingFiles && drive.files.length === 0 ? (
+                <>
+                  {[0, 1, 2].map((i) => (
+                    <div className="file-row file-row--skeleton" key={i} aria-hidden="true">
+                      <div className="file-row__icon" />
+                      <div className="flex flex-1 flex-col gap-2">
+                        <div className="h-3 w-2/5 rounded bg-muted" />
+                        <div className="h-2.5 w-1/4 rounded bg-muted" />
                       </div>
-                      <div className="file-row__text">
-                        {renamingId === f.id ? (
-                          <Input
-                            autoFocus
-                            className="text-input--inline h-7"
-                            value={renameDraft}
-                            onChange={(e) => setRenameDraft(e.target.value)}
-                            onClick={(e) => e.stopPropagation()}
-                            onKeyDown={(e) => {
-                              e.stopPropagation();
-                              if (e.key === 'Enter' && renameDraft.trim()) {
-                                drive.rename(f, renameDraft.trim());
-                                setRenamingId(null);
-                              }
-                              if (e.key === 'Escape') setRenamingId(null);
-                            }}
-                            onBlur={() => setRenamingId(null)}
-                          />
-                        ) : (
-                          <div className="file-row__name">{f.name}</div>
-                        )}
-                        <div className="file-row__meta">
-                          <span>{f.size ? formatBytes(Number(f.size)) : '–'}</span>
-                          <span className="file-row__sep" aria-hidden="true" />
-                          <span>{formatDate(f.modifiedTime)}</span>
+                    </div>
+                  ))}
+                  <span className="sr-only">Loading your files…</span>
+                </>
+              ) : drive.files.length === 0 ? (
+                <div className="empty-state vault-empty">
+                  <FolderLock size={26} className="text-muted-foreground" />
+                  <p className="font-semibold text-foreground">Your vault is empty</p>
+                  <p>Drop a file above and it will show up here, ready to open in Studio.</p>
+                </div>
+              ) : (
+                drive.files.map((f) => {
+                  const kind = fileKind(f);
+                  const KindIcon = KIND_ICON[kind];
+                  const hasThumb = !!f.thumbnailLink && kind === 'image';
+                  return (
+                    <div className="file-row" key={f.id}>
+                      <div
+                        role="button"
+                        tabIndex={0}
+                        className="file-row__preview-trigger"
+                        onClick={() => renamingId !== f.id && setPreviewFile(f)}
+                        onKeyDown={(e) => {
+                          if (renamingId === f.id) return;
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setPreviewFile(f);
+                          }
+                        }}
+                        aria-label={`Preview ${f.name}`}
+                      >
+                        <div className={`file-row__icon file-row__icon--${kind}${hasThumb ? ' file-row__icon--thumb' : ''}`}>
+                          {hasThumb ? <img src={f.thumbnailLink} alt="" loading="lazy" /> : <KindIcon size={18} />}
+                        </div>
+                        <div className="file-row__text">
+                          {renamingId === f.id ? (
+                            <Input
+                              autoFocus
+                              className="text-input--inline h-7"
+                              value={renameDraft}
+                              onChange={(e) => setRenameDraft(e.target.value)}
+                              onClick={(e) => e.stopPropagation()}
+                              onKeyDown={(e) => {
+                                e.stopPropagation();
+                                if (e.key === 'Enter' && renameDraft.trim()) {
+                                  drive.rename(f, renameDraft.trim());
+                                  setRenamingId(null);
+                                }
+                                if (e.key === 'Escape') setRenamingId(null);
+                              }}
+                              onBlur={() => setRenamingId(null)}
+                            />
+                          ) : (
+                            <div className="file-row__name">{f.name}</div>
+                          )}
+                          <div className="file-row__meta">
+                            <span>{f.size ? formatBytes(Number(f.size)) : '–'}</span>
+                            <span className="file-row__sep" aria-hidden="true" />
+                            <span>{formatDate(f.modifiedTime)}</span>
+                          </div>
                         </div>
                       </div>
+                      <div className="file-row__actions">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="file-row__studio"
+                          onClick={() => handleOpenInStudio(f)}
+                          disabled={openingId === f.id}
+                        >
+                          {openingId === f.id ? <Loader2 size={13} className="animate-spin" /> : <Wrench size={13} />}
+                          Open in Studio
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" onClick={() => drive.download(f)} aria-label={`Download ${f.name}`} title="Download">
+                          <Download size={15} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={() => {
+                            setRenamingId(f.id);
+                            setRenameDraft(f.name);
+                          }}
+                          aria-label={`Rename ${f.name}`}
+                          title="Rename"
+                        >
+                          <Pencil size={15} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          className="hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => setPendingDelete(f)}
+                          aria-label={`Delete ${f.name}`}
+                          title="Delete"
+                        >
+                          <Trash2 size={15} />
+                        </Button>
+                      </div>
                     </div>
-                    <div className="file-row__actions">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="file-row__studio"
-                        onClick={() => handleOpenInStudio(f)}
-                        disabled={openingId === f.id}
-                      >
-                        {openingId === f.id ? <Loader2 size={13} className="animate-spin" /> : <Wrench size={13} />}
-                        Open in Studio
-                      </Button>
-                      <Button variant="ghost" size="icon-sm" onClick={() => drive.download(f)} aria-label={`Download ${f.name}`} title="Download">
-                        <Download size={15} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => {
-                          setRenamingId(f.id);
-                          setRenameDraft(f.name);
-                        }}
-                        aria-label={`Rename ${f.name}`}
-                        title="Rename"
-                      >
-                        <Pencil size={15} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        className="hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => setPendingDelete(f)}
-                        aria-label={`Delete ${f.name}`}
-                        title="Delete"
-                      >
-                        <Trash2 size={15} />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
+                  );
+                })
+              )}
+            </div>
           </div>
         </>
       )}
@@ -392,7 +400,8 @@ export function VaultPage({ drive, onOpenInStudio }: Props) {
               <InfoTip>Nothing else in your Google Drive is ever visible to this app.</InfoTip>
             </span>
           </p>
-          <LegalLinks />
+          {/* The desktop page footer already carries these. */}
+          <LegalLinks className="md:hidden" />
         </footer>
       )}
 
