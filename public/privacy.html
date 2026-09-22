@@ -117,7 +117,7 @@
       </p>
       <h3>Sign-in</h3>
       <p>
-        FitForm uses Google Identity Services (Google's own sign-in library) to request an OAuth access token directly from Google, from inside your browser. There is no server-side component to this sign-in. No client secret exists, and no authentication data passes through infrastructure we control. The resulting access token is cached in this browser tab's <code>sessionStorage</code> so that reloading the page keeps you signed in; it is never written to <code>localStorage</code> or any other longer-lived storage, and it disappears automatically when you close the tab or window.
+        FitForm uses Google Identity Services (Google's own sign-in library) to request an OAuth access token directly from Google, from inside your browser. There is no server-side component to this sign-in. No client secret exists, and no authentication data passes through infrastructure we control. On desktop this opens as a popup; on mobile browsers it's a full-page redirect to Google and back, to avoid a background-tab memory issue on some Android browsers. Either way, the resulting access token is cached in this browser tab's <code>sessionStorage</code> so that reloading the page keeps you signed in; it is never written to <code>localStorage</code> or any other longer-lived storage, and it disappears automatically when you close the tab or window.
       </p>
       <h3>Scope of access</h3>
       <p>

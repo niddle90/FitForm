@@ -6,6 +6,9 @@ import {
   saveTokenToSession,
   loadTokenFromSession,
   clearTokenFromSession,
+  isMobileBrowser,
+  startRedirectSignIn,
+  consumeRedirectToken,
   type DriveToken,
   type TokenClientHandle,
 } from './auth';
@@ -81,6 +84,17 @@ export function useDrive() {
   const connect = useCallback(async () => {
     setStatus('connecting');
     setError(null);
+
+    // Mobile: hand off to a full-page redirect instead of a popup (see
+    // auth.ts's "Popup vs redirect sign-in" comment). This function
+    // doesn't return in that case — the tab navigates away immediately,
+    // and the mount effect below picks the result back up once Google
+    // sends the user back and this hook re-initializes from scratch.
+    if (isMobileBrowser()) {
+      startRedirectSignIn(DRIVE_CLIENT_ID);
+      return;
+    }
+
     try {
       if (!tokenClientRef.current) {
         tokenClientRef.current = await createTokenClient(DRIVE_CLIENT_ID);
@@ -109,16 +123,26 @@ export function useDrive() {
     setStatus('signed-out');
   }, []);
 
-  // On mount, try to pick up a still-valid token cached in this tab's
-  // sessionStorage (e.g. from before a reload) and reflect it in the UI
-  // immediately, rather than dropping back to "signed-out" and making the
-  // person reconnect. Falls back to signed-out silently if the cached
-  // token turns out to be stale or Drive rejects it.
+  // On mount, first check whether we've just been redirected back from
+  // Google's mobile sign-in flow (see auth.ts), then fall back to picking
+  // up a still-valid token cached in this tab's sessionStorage (e.g. from
+  // before a reload). Either way, reflect the result in the UI
+  // immediately rather than dropping back to "signed-out" and making the
+  // person reconnect. Falls back to signed-out silently if the token
+  // turns out to be stale or Drive rejects it.
   useEffect(() => {
     purgeLegacyClientIdOverride();
 
-    const cached = loadTokenFromSession();
+    const redirectResult = consumeRedirectToken();
+    if (redirectResult.kind === 'error') {
+      setStatus('error');
+      setError(redirectResult.message);
+      return;
+    }
+
+    const cached = redirectResult.kind === 'token' ? redirectResult.token : loadTokenFromSession();
     if (cached) {
+      if (redirectResult.kind === 'token') saveTokenToSession(cached);
       setStatus('connecting');
       (async () => {
         try {
