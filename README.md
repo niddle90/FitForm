@@ -6,7 +6,7 @@
 
 <p align="center">
   A client-side image and PDF workspace for resizing, cropping, compression,
-  format conversion, printing, and document storage, all in the browser.
+  format conversion, and document storage, all in the browser.
 </p>
 
 <p align="center">
@@ -35,9 +35,9 @@ files to a processing server.
 
 It pairs a clean visual workflow with a processing engine that handles image
 resizing, cover cropping, target-size compression, format conversion, PDF
-page extraction, A4 print preparation, and JPEG-to-PDF creation, entirely
-client-side. Expensive work runs in a Web Worker, so the interface stays
-responsive even on large files.
+page extraction, and JPEG-to-PDF creation, entirely client-side. Expensive
+work runs in a Web Worker, so the interface stays responsive even on large
+files.
 
 An optional **Vault** lets you save documents to your own Google Drive, so
 FitForm never needs a hosted database or file storage of its own.
@@ -64,7 +64,7 @@ The processing flow looks like this:
 1. Browser UI collects the pipeline configuration.
 2. The engine client sends it to a Web Worker.
 3. The imaging engine runs the requested steps: resize, crop, compress,
-   convert, PDF render or create, print layout.
+   convert, PDF render or create.
 4. The result is returned to the UI as a preview, along with its metadata
    and a download link.
 
@@ -78,7 +78,6 @@ The processing flow looks like this:
 | **Format conversion** | Decode and re-encode across JPG, PNG, WebP, BMP, and TGA. |
 | **PDF page extraction** | Extract a chosen page of a PDF as an image, then run it through the rest of the pipeline. |
 | **Images to PDF** | Assemble processed JPEGs into a single PDF, no server required. |
-| **A4 print prep** | Lays an image out for A4 printing at 300 DPI, with margins, alignment, and sizing handled for you. The engine supports this; the current UI doesn't expose a print control. |
 
 Because every operation lives in the same pipeline, they compose freely.
 Resize into a crop, compress the result, convert the format, and hand it
