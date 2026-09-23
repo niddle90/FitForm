@@ -54,7 +54,10 @@ React app owns pipeline controls, file selection, and result presentation.
 The [`imaging`](./imaging) package owns the actual image and PDF operations.
 They only communicate through a single Web Worker. That boundary matters
 because a target-size JPEG search can take several encoding passes, and PDF
-rendering can be memory-hungry, so neither should block the main thread.
+rendering can be memory-hungry, so neither should block the main thread. If
+the worker crashes, the app detects it and offers a restart rather than
+silently failing every call afterward, and a run in progress can be
+cancelled from the UI.
 
 The processing flow looks like this:
 
@@ -70,17 +73,18 @@ The processing flow looks like this:
 | Feature | What it does |
 |---|---|
 | **Resize** | Scales to an exact width and height using Triangle, Catmull-Rom, Mitchell, Lanczos3, HQX, or Magic Kernel resampling. |
-| **Crop** | Cover-style crop against the decoded pixels, anchored to center, top, bottom, left, or right. |
+| **Crop** | Cover-style crop against the decoded pixels, anchored to center, top, bottom, left, or right. Never changes format, but only PNG, BMP, and TGA crops are lossless; JPEG and WebP crops are a same-format re-encode. |
 | **Compress to a target size** | Works backwards from a file size (for example, under 200 KB) instead of a quality slider, narrowing quality, scale, chroma subsampling, and progressive encoding until it fits. |
 | **Format conversion** | Decode and re-encode across JPG, PNG, WebP, BMP, and TGA. |
-| **PDF to image** | Extract any page of a PDF as an image, then run it through the rest of the pipeline. |
+| **PDF page extraction** | Extract a chosen page of a PDF as an image, then run it through the rest of the pipeline. |
 | **Images to PDF** | Assemble processed JPEGs into a single PDF, no server required. |
-| **A4 print prep** | Lays an image out for A4 printing at 300 DPI, with margins, alignment, and sizing handled for you. |
+| **A4 print prep** | Lays an image out for A4 printing at 300 DPI, with margins, alignment, and sizing handled for you. The engine supports this; the current UI doesn't expose a print control. |
 
 Because every operation lives in the same pipeline, they compose freely.
 Resize into a crop, compress the result, convert the format, and hand it
-straight to print or PDF export, without exporting and re-importing between
-steps.
+straight to PDF export, without exporting and re-importing between steps.
+When neither compression nor conversion runs, the output keeps the source's
+original format rather than defaulting to something else.
 
 ## WebAssembly and codecs
 
@@ -94,7 +98,7 @@ assets and load on demand. No native executable or backend is required.
 
 [`imaging/`](./imaging) is a standalone TypeScript package with its own
 browser and Node entry points, so the same processing code that runs in the
-app is also exercised directly in tests:
+app also runs directly in Node:
 
 ```text
 imaging/
@@ -121,9 +125,11 @@ send to a third-party server.
 
 **Vault:** storage is your own Google Drive, not FitForm infrastructure.
 Access is scoped to `drive.file`, which limits FitForm to files it created
-and files you explicitly opened via Google's picker. The access token lives
-in memory for the page session only, never in `localStorage` or
-`sessionStorage`.
+and files you explicitly opened via Google's picker. The Drive access token
+is cached in `sessionStorage`, so a page reload doesn't force you to
+reconnect, but it never touches `localStorage` and disappears once the tab
+is closed. A small, non-sensitive value, the cached Vault folder ID, is kept
+in `localStorage` so it doesn't need to be looked up again on every visit.
 
 ## Project structure
 
@@ -156,23 +162,6 @@ npm run build       # production build
 npm run preview     # preview the production build locally
 ```
 
-## Testing
-
-```bash
-npm test
-```
-
-This runs three suites:
-
-- **Pipeline** verifies that UI choices translate into the correct
-  processing configuration (resize, crop, compression, conversion, output
-  handling).
-- **Worker lifecycle** covers startup, messaging, errors, cancellation, and
-  restart behavior for the engine client.
-- **Imaging smoke tests** exercise the real imaging operations end to end:
-  resize, compress, convert, print layout, JPEG to PDF, and PDF page
-  extraction.
-
 ## Deployment
 
 FitForm builds to a static `dist/` directory that any static host can serve:
@@ -202,13 +191,18 @@ A GitHub Actions workflow for automated deployment is included under
 ## Known limitations
 
 - TGA output isn't natively previewable in most browsers or operating systems.
-- Lossy re-encodes (JPEG, WebP) lose information, as always.
-- Large images and high-resolution PDF pages need meaningful memory.
+- Lossy re-encodes (JPEG, WebP) lose information, as always, including on a
+  same-format crop.
+- Large images and high-resolution PDF pages need meaningful memory on
+  lower-end mobile devices.
 - PDF rendering speed varies by device and browser.
 - Vault needs an OAuth client configured for your deployment origin if you
   are self-hosting.
 - WASM codecs add to the static bundle size, since the processing engines
   ship to the browser.
+- Cancellation terminates and restarts the whole worker rather than
+  stopping a single in-flight operation, since the underlying WASM calls
+  run to completion once started.
 
 ## License
 
