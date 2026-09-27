@@ -1,19 +1,19 @@
 // Copies nine .wasm binaries out of node_modules and into public/wasm,
 // where Vite serves them as plain static files with the correct
-// `Content-Type: application/wasm` — required per vault-suite's README
+// `Content-Type: application/wasm` — required per imaging's README
 // ("WASM asset hosting" section): these files must never be
 // inlined/bundled by the bundler. Seven of the nine are the jSquash/
-// pdfium binaries vault-suite's browser codecs need at runtime; the
+// pdfium binaries imaging's browser codecs need at runtime; the
 // other two (hqx, magic-kernel) are extra resize kernels this app
 // primes itself — see the comment further down.
 //
 // jpegopt.wasm (vxpress's native engine) is NOT copied here — it ships
-// inside vault-suite itself and is resolved automatically by
+// inside imaging itself and is resolved automatically by
 // createJpegOptEngineBrowser() via `new URL(..., import.meta.url)`,
 // which Vite auto-detects and copies on its own. Nothing to do for it.
 //
 // Two extra files (hqx, magic-kernel) are also copied here even though
-// vault-suite's own README doesn't list them: vault-suite's ResizeCodec
+// imaging's own README doesn't list them: imaging's ResizeCodec
 // type permits every @jsquash/resize method ('hqx', 'magicKernel*'
 // included), but its browser-codecs.ts only ever primes the plain
 // 'resize' wasm module before handing back a ResizeCodec — the other two

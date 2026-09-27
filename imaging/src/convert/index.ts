@@ -20,6 +20,7 @@
 import type { JpegCodec, PngCodec, WebpCodec } from '../codecs.js';
 import { VaultError, silentLogger, type Logger } from '../errors.js';
 import { assertDecodableImageSize } from '../decode-guard.js';
+import { assertSaneInputSize } from '../limits.js';
 import { encodeBmp, decodeBmp } from './bmp.js';
 import { encodeTga, decodeTga } from './tga.js';
 
@@ -156,6 +157,8 @@ export async function convertFormat(
   const TOOL = 'convertFormat';
   const log =
     options.onLog ?? (options.verbose ? (m: string) => console.error(`[convertFormat] ${m}`) : silentLogger);
+
+  assertSaneInputSize(TOOL, input, 'convertFormat');
 
   const quality = options.quality ?? 90;
   if (quality < 1 || quality > 100) {

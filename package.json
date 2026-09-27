@@ -13,8 +13,9 @@
     "smoke-test": "node scripts/smoke-test.mjs",
     "pipeline-test": "node --experimental-strip-types scripts/pipeline-test.mjs",
     "client-test": "node --experimental-strip-types scripts/client-test.mjs",
-    "test": "npm run pipeline-test && npm run client-test && npm run smoke-test",
-    "deploy": "VITE_BASE_PATH=/FitForm/ npm run build && gh-pages -d dist"
+    "exif-orientation-test": "node --experimental-strip-types scripts/exif-orientation-test.mjs",
+    "test": "npm run pipeline-test && npm run client-test && npm run exif-orientation-test && npm run smoke-test && npm test --prefix imaging",
+    "deploy": "VITE_BASE_PATH=$(node scripts/resolve-base-path.mjs) npm run build && gh-pages -d dist"
   },
   "dependencies": {
     "@embedpdf/pdfium": "2.15.0",

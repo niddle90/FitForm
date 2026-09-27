@@ -34,6 +34,50 @@ import type { LogLine } from './components/LogConsole';
 type EngineStatus = 'loading' | 'ready' | 'error';
 type StageStatus = 'pending' | 'active' | 'done' | 'error';
 
+// Mirrors imaging's own MAX_INPUT_BYTES (imaging/src/limits.ts) — every
+// raw-byte imaging entry point (compress, convertFormat, printLayout,
+// pdfToImages, and now pdfPageCount) rejects input past this size, but
+// that check only runs once the bytes are already in the worker. Checking
+// `File.size` here first means an oversized file never even gets read
+// into memory (`f.arrayBuffer()`) on the main thread, let alone
+// transferred to the worker. Kept as a local literal rather than an
+// import for the same reason DimensionsControl.tsx's MAX_DIMENSION_PX is:
+// worker.ts is deliberately the only file in this app that imports
+// 'imaging' (see its own header comment).
+const MAX_INPUT_BYTES = 100 * 1024 * 1024;
+
+// imaging's own MAX_IMAGE_PIXELS (60 megapixels, ~229MB as an RGBA buffer)
+// is a shared ceiling meant to stop a malformed/hostile file from forcing
+// an oversized allocation — deliberately generous, since it also has to
+// leave room for legitimate large images on capable hardware. It isn't a
+// safe *working-memory* budget for the low end of what this app actually
+// runs on: a low-memory Android phone's browser tab can be killed well
+// before 60 megapixels' worth of decoded RGBA (plus the worker transfer
+// copy, resize buffers, encoder buffers and WASM heap allocations that
+// pipeline stage adds on top of it — see worker.ts) ever gets there. This
+// is a second, lower ceiling applied only when the Device Memory API
+// reports a memory-constrained device, so ordinary phone photos (a modern
+// phone's main camera is typically 8–12MP; even most "high-res" modes
+// stay under this) are unaffected and only genuinely large images
+// (48MP+ pro-mode shots, big panoramas/scans) are turned away — with a
+// clear reason — on hardware where attempting them is a real crash risk.
+const LOW_MEMORY_MAX_PIXELS = 24_000_000;
+
+/**
+ * True if the browser's Device Memory API (Chromium-based browsers only
+ * — Safari and Firefox don't implement it) reports a memory-constrained
+ * device. Fails open (returns false) when the API isn't available, rather
+ * than guessing from platform/UA — an undetectable device is treated as
+ * "don't additionally restrict" instead of risking false positives on
+ * capable hardware the API just doesn't run on.
+ */
+function isLowMemoryDevice(): boolean {
+  const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+  // Chrome buckets this to one of 0.25/0.5/1/2/4/8 (GB); <= 4GB is
+  // Chrome's own rough cutoff for what it calls a "low-end device".
+  return typeof deviceMemory === 'number' && deviceMemory <= 4;
+}
+
 const STAGE_LABELS: Record<string, string> = {
   resize: 'Resizing…',
   crop: 'Cropping…',
@@ -143,6 +187,7 @@ export default function App() {
       setRunning(false);
       setStageStatus({});
     }
+    setPdfExtracting(false);
   }, [onEngineEvent]);
 
   // ── boot the engine once ─────────────────────────────────────────────
@@ -205,6 +250,14 @@ export default function App() {
     async (f: File) => {
       invalidateActiveRun();
       resetDerivedState();
+      if (f.size > MAX_INPUT_BYTES) {
+        setRunError({
+          message: `${f.name} is ${(f.size / (1024 * 1024)).toFixed(1)}MB, which exceeds the maximum supported file size (${MAX_INPUT_BYTES / (1024 * 1024)}MB)`,
+          tool: 'handleFile',
+          code: 'MEMORY',
+        });
+        return;
+      }
       const buf = new Uint8Array(await f.arrayBuffer());
       setFile(f);
       setSourceBytesRaw(buf);
@@ -250,10 +303,18 @@ export default function App() {
     if (sourceKind !== 'pdf' || !sourceBytesRaw || engineStatus !== 'ready' || pdfPageCount !== null) return;
     const engine = engineRef.current;
     if (!engine) return;
+    let cancelled = false;
     engine
       .pdfPageCount(sourceBytesRaw, onEngineEvent)
-      .then(setPdfPageCount)
-      .catch((e: EngineError) => pushLog('error', `pdf-info: ${e.message}`));
+      .then((n) => {
+        if (!cancelled) setPdfPageCount(n);
+      })
+      .catch((e: EngineError) => {
+        if (!cancelled) pushLog('error', `pdf-info: ${e.message}`);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [sourceKind, sourceBytesRaw, engineStatus, pdfPageCount, onEngineEvent, pushLog]);
 
   // ── inspect the working image whenever it changes ────────────────────
@@ -299,11 +360,13 @@ export default function App() {
     const engine = engineRef.current;
     if (!engine || !sourceBytesRaw || !file) return;
     invalidateActiveRun();
+    const myRunId = runIdRef.current;
     setPdfExtracting(true);
     setResult(null);
     setRunError(null);
     try {
       const pages = await engine.pdfExtract(sourceBytesRaw, { page: pdfPageNumber, quality: pdfQuality, maxRenderDim: pdfMaxRenderDim }, onEngineEvent);
+      if (runIdRef.current !== myRunId) return;
       const extracted = pages[0];
       if (!extracted) return;
       if (pdfUrlRef.current) URL.revokeObjectURL(pdfUrlRef.current);
@@ -316,9 +379,10 @@ export default function App() {
       setRunError(null);
       setStageStatus({});
     } catch (e) {
+      if (runIdRef.current !== myRunId) return;
       pushLog('error', e instanceof EngineError ? e.message : String(e));
     } finally {
-      setPdfExtracting(false);
+      if (runIdRef.current === myRunId) setPdfExtracting(false);
     }
   }, [sourceBytesRaw, file, pdfPageNumber, pdfQuality, pdfMaxRenderDim, onEngineEvent, pushLog, invalidateActiveRun]);
 
@@ -338,6 +402,17 @@ export default function App() {
   const handleRun = useCallback(async () => {
     const engine = engineRef.current;
     if (!engine || !workingBytes || engineStatus !== 'ready') return;
+    if (inspectInfo?.width && inspectInfo.height && isLowMemoryDevice()) {
+      const pixels = inspectInfo.width * inspectInfo.height;
+      if (pixels > LOW_MEMORY_MAX_PIXELS) {
+        setRunError({
+          message: `This image is ${(pixels / 1_000_000).toFixed(0)} megapixels (${inspectInfo.width}×${inspectInfo.height}), which risks running out of memory on this device. Try a smaller image, or resize it elsewhere first.`,
+          tool: 'handleRun',
+          code: 'MEMORY',
+        });
+        return;
+      }
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
     const myRunId = (runIdRef.current += 1);
     setRunning(true);
@@ -365,7 +440,7 @@ export default function App() {
     } finally {
       if (runIdRef.current === myRunId) setRunning(false);
     }
-  }, [workingBytes, workingLabel, pipelineConfig, engineStatus, pushLog]);
+  }, [workingBytes, workingLabel, pipelineConfig, engineStatus, inspectInfo, pushLog]);
 
   const handleCancel = useCallback(async () => {
     const engine = engineRef.current;

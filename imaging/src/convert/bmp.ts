@@ -18,12 +18,13 @@
 
 import { VaultError } from '../errors.js';
 import { makeImageData } from '../image-data.js';
-import { assertSaneImageDimensions } from '../limits.js';
+import { assertSaneImageDimensions, assertEncodableImageDimensions } from '../limits.js';
 
 const TOOL = 'convertFormat';
 
 export function encodeBmp(image: ImageData): Uint8Array {
   const { width, height, data } = image;
+  assertEncodableImageDimensions(TOOL, width, height, 'bmp');
   const rowSize = Math.ceil((width * 3) / 4) * 4; // 24bpp rows padded to 4 bytes
   const pixelArraySize = rowSize * height;
   const fileHeaderSize = 14;

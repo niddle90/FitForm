@@ -12,11 +12,12 @@
 import { compress, type CanvasProvider } from '../src/compress.js';
 import { printLayout } from '../src/printLayout.js';
 import { convertFormat, detectFormat, formatFromString, formatFromPath } from '../src/convert/index.js';
-import { decodeBmp } from '../src/convert/bmp.js';
-import { decodeTga } from '../src/convert/tga.js';
+import { decodeBmp, encodeBmp } from '../src/convert/bmp.js';
+import { decodeTga, encodeTga } from '../src/convert/tga.js';
 import { jpegsToPdf, parseJpegMeta } from '../src/jpegsToPdf.js';
 import { pdfToImages } from '../src/pdfToImages.js';
 import { VaultError } from '../src/errors.js';
+import { MAX_INPUT_BYTES } from '../src/limits.js';
 import { createJpegOptEngineFromBinary } from '../src/jpegopt-engine.js';
 
 import { readFile } from 'node:fs/promises';
@@ -93,6 +94,30 @@ async function main() {
       () => compress(photo, { targetKb: 0, canvasProvider: nodeCanvasProvider }),
       'ARGS',
       'compress targetKb=0',
+    );
+  });
+
+  await test('rejects fractional target-kb instead of silently flooring it', async () => {
+    // Regression test: this used to pass validation (targetKb > 0) and then
+    // get silently Math.floor'd, so targetKb: 0.5 became targetKb: 0 — a
+    // value the API documents as invalid — instead of being rejected.
+    await expectVaultError(
+      () => compress(photo, { targetKb: 0.5, canvasProvider: nodeCanvasProvider }),
+      'ARGS',
+      'compress targetKb=0.5',
+    );
+  });
+
+  await test('rejects an oversized input as MEMORY before doing any work', async () => {
+    // A byte-length check only — no real 100MB+ buffer of image data is
+    // constructed, just an oversized *allocation*, which is exactly the
+    // cheap-to-trigger, expensive-to-process shape assertSaneInputSize
+    // exists to reject up front.
+    const huge = new Uint8Array(MAX_INPUT_BYTES + 1);
+    await expectVaultError(
+      () => compress(huge, { targetKb: 100, canvasProvider: nodeCanvasProvider }),
+      'MEMORY',
+      'compress oversized input',
     );
   });
 
@@ -538,6 +563,69 @@ async function main() {
       threw = e instanceof VaultError && e.code === 'MEMORY';
     }
     assert(threw, 'expected VaultError(MEMORY), not an attempted multi-gigabyte allocation');
+  });
+
+  // A minimal stand-in for a caller-supplied ImageData: encodeBmp/encodeTga
+  // must reject bad width/height before ever touching `data`, so an empty
+  // buffer here is deliberate — these tests would still need to allocate a
+  // real multi-GB array if the dimension check didn't run first.
+  function fakeImageData(width: number, height: number): ImageData {
+    return { width, height, data: new Uint8ClampedArray(0), colorSpace: 'srgb' } as ImageData;
+  }
+
+  await test('encodeBmp rejects non-integer/negative dimensions instead of writing a corrupt header', () => {
+    for (const [width, height] of [
+      [-1, 4],
+      [4.5, 4],
+      [0, 4],
+    ] as const) {
+      let threw = false;
+      try {
+        encodeBmp(fakeImageData(width, height));
+      } catch (e) {
+        threw = e instanceof VaultError && e.code === 'ARGS';
+      }
+      assert(threw, `expected VaultError(ARGS) for encodeBmp(${width}x${height})`);
+    }
+  });
+
+  await test('encodeBmp rejects an absurdly large size instead of attempting the allocation', () => {
+    let threw = false;
+    try {
+      encodeBmp(fakeImageData(70000, 70000));
+    } catch (e) {
+      threw = e instanceof VaultError && e.code === 'MEMORY';
+    }
+    assert(threw, 'expected VaultError(MEMORY) for a 70000x70000 encodeBmp call');
+  });
+
+  await test('encodeTga rejects non-integer/negative dimensions instead of writing a corrupt header', () => {
+    for (const [width, height] of [
+      [-1, 4],
+      [4.5, 4],
+      [0, 4],
+    ] as const) {
+      let threw = false;
+      try {
+        encodeTga(fakeImageData(width, height));
+      } catch (e) {
+        threw = e instanceof VaultError && e.code === 'ARGS';
+      }
+      assert(threw, `expected VaultError(ARGS) for encodeTga(${width}x${height})`);
+    }
+  });
+
+  await test('encodeTga rejects dimensions that would overflow its 16-bit header fields', () => {
+    // Regression test: encodeTga previously wrote width/height straight into
+    // 16-bit header fields with no validation at all, so a caller-supplied
+    // dimension past 65535 would silently wrap instead of failing.
+    let threw = false;
+    try {
+      encodeTga(fakeImageData(70000, 70000));
+    } catch (e) {
+      threw = e instanceof VaultError && e.code === 'MEMORY';
+    }
+    assert(threw, 'expected VaultError(MEMORY) for a 70000x70000 encodeTga call');
   });
 
   await test('printLayout rejects out-of-range quality instead of passing it through silently', async () => {

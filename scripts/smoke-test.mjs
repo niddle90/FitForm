@@ -1,15 +1,15 @@
-// Functional smoke test for every vault-suite call made in
+// Functional smoke test for every imaging call made in
 // src/engine/worker.ts. Runs against the Node codec variant (the browser
 // variant needs OffscreenCanvas/fetch-from-URL, which don't exist in
-// plain Node) but exercises the *exact same* vxpress/vxconv/vxpeel/vxbind/
+// plain Node) but exercises the *exact same* compress/convertFormat/pdfToImages/jpegsToPdf/
 // resize/parseJpegMeta call shapes and option names used in the real
 // worker, against the same pinned WASM binaries the app ships.
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import assert from 'node:assert/strict';
 
-import { vxpress, vxprint, vxconv, vxpeel, vxbind, parseJpegMeta, detectFormat } from 'vault-suite';
-import { createNodeCodecs, createJpegOptEngineNode } from 'vault-suite/node';
+import { compress, printLayout, convertFormat, pdfToImages, jpegsToPdf, parseJpegMeta, detectFormat } from 'imaging';
+import { createNodeCodecs, createJpegOptEngineNode } from 'imaging/node';
 import { initHqx, initMagicKernel } from '@jsquash/resize';
 
 const require = createRequire(import.meta.url);
@@ -57,8 +57,8 @@ for (const method of ['triangle', 'catrom', 'mitchell', 'lanczos3', 'hqx', 'magi
   ok(`resize method=${method} -> 48x32`);
 }
 
-section('compress: vxpress wasm engine, target-size bisection');
-const compressed = await vxpress(jpegBytes, {
+section('compress: wasm engine, target-size bisection');
+const compressed = await compress(jpegBytes, {
   targetKb: 5,
   engine: 'wasm',
   wasmEngine,
@@ -72,8 +72,8 @@ assert.ok(compressed.data.byteLength > 0);
 assert.equal(detectFormat(compressed.data), 'jpg');
 ok(`compressed to ${(compressed.data.byteLength / 1024).toFixed(2)}KB (target 5KB), engine=${compressed.engine}, quality=${compressed.quality}, metTarget=${compressed.metTarget}`);
 
-section('compress: vxpress with forced cover-crop dimensions');
-const croppedCompress = await vxpress(jpegBytes, {
+section('compress: forced cover-crop dimensions');
+const croppedCompress = await compress(jpegBytes, {
   targetKb: 8,
   engine: 'wasm',
   wasmEngine,
@@ -111,7 +111,7 @@ function closeTo(actual, expected, tol = 40) {
 }
 async function cropAndSample(sourceImageData, cw, ch, anchor, sampleXs, sampleYs) {
   const src = new Uint8Array(await codecs.jpeg.encode(sourceImageData, { quality: 98 }));
-  const out = await vxpress(src, {
+  const out = await compress(src, {
     targetKb: 1_000_000, // effectively unbounded — isolates crop geometry from the size bisection
     engine: 'wasm',
     wasmEngine,
@@ -174,13 +174,13 @@ const tallImg = solidHalves(100, 200, 100, RED, BLUE, false);
 
 section('convert: round-trip through every output format');
 for (const format of ['jpg', 'png', 'webp', 'bmp', 'tga']) {
-  const out = await vxconv(pngBytes, codecs, { format, quality: 90 });
+  const out = await convertFormat(pngBytes, codecs, { format, quality: 90 });
   assert.equal(detectFormat(out), format);
   ok(`png -> ${format}: ${out.byteLength} bytes, detectFormat confirms ${format}`);
 }
 
-section('print: vxprint A4 @ 300dpi layout');
-const printed = await vxprint(jpegBytes, { jpeg: codecs.jpeg, resize: codecs.resize }, { topCm: 1, center: true, quality: 90 });
+section('print: printLayout A4 @ 300dpi layout');
+const printed = await printLayout(jpegBytes, { jpeg: codecs.jpeg, resize: codecs.resize }, { topCm: 1, center: true, quality: 90 });
 assert.equal(detectFormat(printed), 'jpg');
 const printMeta = parseJpegMeta(printed);
 const pxPerCm = 300 / 2.54;
@@ -189,11 +189,11 @@ assert.equal(printMeta.h, Math.round(29.7 * pxPerCm));
 ok(`print output ${printMeta.w}x${printMeta.h} matches computed A4@300dpi (2480x3508)`);
 
 section('bind: wrap JPEG into a single-page PDF');
-const { pdf } = vxbind([jpegBytes]);
+const { pdf } = jpegsToPdf([jpegBytes]);
 assert.equal(String.fromCharCode(...pdf.slice(0, 4)), '%PDF');
-ok(`vxbind produced a ${pdf.byteLength}-byte PDF starting with %PDF`);
+ok(`jpegsToPdf produced a ${pdf.byteLength}-byte PDF starting with %PDF`);
 
-section('pdf round trip: page count + vxpeel extraction on a hand-built minimal PDF');
+section('pdf round trip: page count + pdfToImages extraction on a hand-built minimal PDF');
 function buildMinimalPdf() {
   const enc = (s) => new TextEncoder().encode(s);
   const parts = [];
@@ -247,12 +247,12 @@ const pageCount = pdfPageCount(pdfBytes);
 assert.equal(pageCount, 1);
 ok(`hand-built PDF parses, page count = ${pageCount}`);
 
-const pages = await vxpeel(pdfBytes, codecs, { page: 1, quality: 85, maxRenderDim: 400 });
+const pages = await pdfToImages(pdfBytes, codecs, { page: 1, quality: 85, maxRenderDim: 400 });
 assert.equal(pages.length, 1);
 assert.equal(pages[0].pageNumber, 1);
 assert.ok(pages[0].jpeg.byteLength > 0);
 assert.equal(detectFormat(pages[0].jpeg), 'jpg');
 const pageMeta = parseJpegMeta(pages[0].jpeg);
-ok(`vxpeel extracted page 1 as JPEG: ${pages[0].jpeg.byteLength} bytes, ${pageMeta.w}x${pageMeta.h}`);
+ok(`pdfToImages extracted page 1 as JPEG: ${pages[0].jpeg.byteLength} bytes, ${pageMeta.w}x${pageMeta.h}`);
 
 section('all checks passed');

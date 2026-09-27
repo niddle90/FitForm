@@ -20,12 +20,14 @@ otherwise) and call it from your own CLI, service, or app shell.
 
 ## How it works
 
-JPEG size vs. quality is monotonic (non-decreasing) for a fixed image, so
-finding the best quality under a byte budget is a plain **bisection on
-encode size alone** — no decode-back, no perceptual metric (MS-SSIM/GMSD),
-no multi-pass comparison. Each encode of a several-megapixel image takes a
-few tens of milliseconds, so the whole search finishes in well under a
-second, single-threaded.
+JPEG size vs. quality is monotonic (non-decreasing) *in practice*, for a
+fixed image at a fixed subsampling/progressive/dimension configuration —
+libjpeg(-turbo) doesn't formally guarantee this for every configuration,
+but it holds reliably enough that finding the best quality under a byte
+budget is a plain **bisection on encode size alone** — no decode-back, no
+perceptual metric (MS-SSIM/GMSD), no multi-pass comparison. Each encode of
+a several-megapixel image takes a few tens of milliseconds, so the whole
+search finishes in well under a second, single-threaded.
 
 If width/height aren't pinned and even the quality floor (20 by default,
 configurable — see "Customization knobs" below) can't hit the target, it

@@ -29,6 +29,36 @@ export const MAX_IMAGE_DIMENSION = 20_000;
 /** Total pixel count (width * height) may not exceed this. */
 export const MAX_IMAGE_PIXELS = 60_000_000; // ~229MB as RGBA — generous, not unlimited
 
+/**
+ * Maximum size, in bytes, of an *encoded* input file (JPEG/PNG/WebP/PDF/…)
+ * accepted at any public entry point that takes raw file bytes.
+ *
+ * This is a different axis from MAX_IMAGE_DIMENSION/MAX_IMAGE_PIXELS above:
+ * those bound the *decoded* pixel buffer a declared width/height can force.
+ * This one bounds the *encoded* file itself, before it's ever decoded —
+ * a small, valid-looking image can still be wrapped in an enormous byte
+ * stream (padding, garbage trailing data, a deliberately bloated file), and
+ * every one of these entry points copies the whole input into WASM memory
+ * (`mod.HEAPU8.set(input, inPtr)`) or hands it to a canvas/PDFium decoder
+ * as one contiguous buffer before any pixel-level guard ever runs. For a
+ * mobile-first browser app, that copy alone is worth bounding.
+ *
+ * 100MB is deliberately generous for a photo/PDF editing tool — this exists
+ * to catch pathological/hostile input, not to constrain normal use.
+ */
+export const MAX_INPUT_BYTES = 100 * 1024 * 1024;
+
+export function assertSaneInputSize(tool: string, input: Uint8Array, context: string): void {
+  if (input.byteLength > MAX_INPUT_BYTES) {
+    throw new VaultError(
+      tool,
+      'MEMORY',
+      `${context}: input is ${(input.byteLength / (1024 * 1024)).toFixed(1)}MB, which exceeds the ` +
+        `maximum supported input size (${MAX_INPUT_BYTES / (1024 * 1024)}MB)`,
+    );
+  }
+}
+
 export function assertSaneImageDimensions(
   tool: string,
   width: number,
@@ -53,4 +83,25 @@ export function assertSaneImageDimensions(
         `supported pixel count (${MAX_IMAGE_PIXELS.toLocaleString()}px)`,
     );
   }
+}
+
+/**
+ * Same size ceiling as assertSaneImageDimensions, but for public *encoder*
+ * entry points (encodeBmp/encodeTga) — the dimensions here come from the
+ * caller's own ImageData, not a declared field decoded out of an untrusted
+ * file, so a bad value is a caller/argument error (ARGS), not a FORMAT or
+ * MEMORY one. This also rejects non-integer width/height before they reach
+ * a binary header: TGA's width/height fields are 16-bit (max 65535), and
+ * MAX_IMAGE_DIMENSION (20,000) is comfortably under that, so passing this
+ * check also guarantees a TGA header field can't silently wrap.
+ */
+export function assertEncodableImageDimensions(tool: string, width: number, height: number, format: string): void {
+  if (!Number.isInteger(width) || !Number.isInteger(height) || width < 1 || height < 1) {
+    throw new VaultError(
+      tool,
+      'ARGS',
+      `${format}: width and height must be positive integers, got ${width}x${height}`,
+    );
+  }
+  assertSaneImageDimensions(tool, width, height, `${format} encode`);
 }

@@ -2,10 +2,12 @@
  * jpegopt-fast -- minimal, fast "hit a target JPEG size" tool.
  *
  * Why this is fast where the original wasn't:
- *   JPEG size vs. quality is monotonic (non-decreasing) for a fixed image,
- *   so finding the highest quality that still fits under a byte budget is a
- *   plain bisection on ENCODE alone -- no decode-back, no MS-SSIM, no
- *   multi-scale Gaussian pyramids. ~7 encode passes (log2(100)) instead of
+ *   JPEG size vs. quality is monotonic (non-decreasing) *in practice*, for
+ *   a fixed image at a fixed subsampling/progressive/dimension config --
+ *   not something libjpeg(-turbo) formally guarantees for every possible
+ *   configuration, but reliable enough that finding the highest quality
+ *   that still fits under a byte budget is a plain bisection on ENCODE
+ *   alone -- no decode-back, no MS-SSIM, no multi-scale Gaussian pyramids. ~7 encode passes (log2(100)) instead of
  *   ~100 encode+decode+metric passes. Each encode of a several-megapixel
  *   image is a few tens of ms, so the whole search finishes in well under
  *   a second, single-threaded, which also happens to be exactly the

@@ -4,6 +4,22 @@ import type { CropAnchor, CropOffset, CropRect, CropMode } from '../engine/types
 import { CropPositioner } from './CropPositioner';
 import { CropSelector } from './CropSelector';
 
+// Mirrors imaging's own MAX_IMAGE_DIMENSION (imaging/src/limits.ts). Kept as
+// a local literal rather than imported from 'imaging' because worker.ts is
+// deliberately the only file in this app that imports that package (see its
+// top-of-file comment) — this component just needs the number, not the
+// WASM-heavy module. Clamping here also gives immediate UI feedback instead
+// of letting a huge or non-finite value (e.g. `1e309` -> `Infinity`) reach
+// the pipeline config at all.
+const MAX_DIMENSION_PX = 20_000;
+
+function clampDimensionInput(raw: string): number | undefined {
+  if (!raw) return undefined;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return undefined;
+  return Math.min(MAX_DIMENSION_PX, Math.max(1, Math.round(n)));
+}
+
 interface Props {
   width?: number;
   height?: number;
@@ -103,11 +119,12 @@ export function DimensionsControl({
           <input
             type="number"
             min={1}
+            max={MAX_DIMENSION_PX}
             inputMode="numeric"
             disabled={isFree}
             placeholder={sourceWidth ? String(sourceWidth) : 'auto'}
             value={width ?? ''}
-            onChange={(e) => onChange({ width: e.target.value ? Math.max(1, Number(e.target.value)) : undefined })}
+            onChange={(e) => onChange({ width: clampDimensionInput(e.target.value) })}
           />
         </label>
         <span className="dims-row__by">×</span>
@@ -116,11 +133,12 @@ export function DimensionsControl({
           <input
             type="number"
             min={1}
+            max={MAX_DIMENSION_PX}
             inputMode="numeric"
             disabled={isFree}
             placeholder={sourceHeight ? String(sourceHeight) : 'auto'}
             value={height ?? ''}
-            onChange={(e) => onChange({ height: e.target.value ? Math.max(1, Number(e.target.value)) : undefined })}
+            onChange={(e) => onChange({ height: clampDimensionInput(e.target.value) })}
           />
         </label>
       </div>

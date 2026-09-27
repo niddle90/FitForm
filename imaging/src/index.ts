@@ -44,5 +44,5 @@ export type {
 } from './codecs.js';
 
 export { VaultError, type VaultErrorCode } from './errors.js';
-export { MAX_IMAGE_DIMENSION, MAX_IMAGE_PIXELS, assertSaneImageDimensions } from './limits.js';
+export { MAX_IMAGE_DIMENSION, MAX_IMAGE_PIXELS, assertSaneImageDimensions, MAX_INPUT_BYTES, assertSaneInputSize } from './limits.js';
 export { assertDecodableImageSize } from './decode-guard.js';

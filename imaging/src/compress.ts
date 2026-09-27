@@ -57,6 +57,7 @@
  */
 
 import { VaultError, silentLogger, type Logger } from './errors.js';
+import { assertSaneInputSize } from './limits.js';
 import { parseJpegMeta } from './jpegsToPdf.js';
 import type {
   JpegOptEngine,
@@ -189,10 +190,12 @@ export async function compress(
   const log =
     options.onLog ?? (options.verbose ? (m: string) => console.error(`[compress] ${m}`) : silentLogger);
 
-  if (!Number.isFinite(options.targetKb) || options.targetKb <= 0) {
+  if (!Number.isInteger(options.targetKb) || options.targetKb <= 0) {
     throw new VaultError(TOOL, 'ARGS', '--target-kb is required and must be a positive integer');
   }
-  const targetKb = Math.floor(options.targetKb);
+  const targetKb = options.targetKb;
+
+  assertSaneInputSize(TOOL, input, 'compress');
 
   const requestedEngine = options.engine ?? 'auto';
   if (requestedEngine === 'wasm' && !options.wasmEngine) {
@@ -263,12 +266,20 @@ async function runWasmEngine(
       cropAnchor: options.cropAnchor,
     });
   } catch (e) {
-    // RangeError from jpegopt-engine.ts's own argument validation is a
-    // programmer error at the tool boundary, not a data problem — surface
-    // it as ARGS rather than letting a raw RangeError escape the
-    // suite's categorized-error contract (see errors.ts).
     const detail = e instanceof Error ? e.message : String(e);
-    throw new VaultError(TOOL, 'ARGS', detail);
+    // jpegopt-engine.ts's run() documents exactly two ways to fail here:
+    // a plain RangeError from its own argument validation (a programmer
+    // error at the tool boundary, not a data problem), or a WASM
+    // allocation/runtime failure (out-of-memory on the input buffer, or
+    // an Emscripten abort/trap escaping the WASM call). A decode failure
+    // isn't among them — run() returns null for that rather than
+    // throwing, handled separately below. So RangeError maps to ARGS;
+    // everything else that reaches this catch is a memory/runtime
+    // failure, not a bad argument, and is classified as such.
+    if (e instanceof RangeError) {
+      throw new VaultError(TOOL, 'ARGS', detail);
+    }
+    throw new VaultError(TOOL, 'MEMORY', detail);
   }
 
   if (!result) {

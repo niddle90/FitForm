@@ -22,6 +22,7 @@ import {
   encodeBmp,
   encodeTga,
   assertDecodableImageSize,
+  assertSaneInputSize,
 } from 'imaging';
 import type { VaultCodecs, JpegOptEngine, CropAnchor } from 'imaging';
 import { createBrowserCodecs, createJpegOptEngineBrowser } from 'imaging/browser';
@@ -30,6 +31,7 @@ import { createBrowserCodecs, createJpegOptEngineBrowser } from 'imaging/browser
 // own printLayout hardcodes — see scripts/copy-wasm-assets.mjs's comment.
 import { initHqx, initMagicKernel } from '@jsquash/resize';
 import { parseHeaderDimensions } from './imageMeta';
+import { orientedDimensions, applyExifOrientation } from './exif-orientation';
 
 import type {
   WorkerRequest,
@@ -137,8 +139,11 @@ async function decodeToImageData(bytes: Uint8Array, format: ImageFormat): Promis
     assertDecodableImageSize('worker', bytes, format);
   }
   switch (format) {
-    case 'jpg':
-      return c.jpeg.decode(toArrayBuffer(bytes));
+    case 'jpg': {
+      const decoded = await c.jpeg.decode(toArrayBuffer(bytes));
+      const orient = parseJpegMeta(bytes)?.orient ?? 1;
+      return applyExifOrientation(decoded, orient);
+    }
     case 'png':
       return c.png.decode(toArrayBuffer(bytes));
     case 'webp':
@@ -279,7 +284,10 @@ async function inspect(bytes: Uint8Array): Promise<InspectInfo> {
   const format = detectFormat(bytes) as ImageFormat | null;
   if (!format) return { format: null };
   const jpegMeta = format === 'jpg' ? parseJpegMeta(bytes) : null;
-  if (jpegMeta) return { format, width: jpegMeta.w, height: jpegMeta.h, jpegMeta };
+  if (jpegMeta) {
+    const { width, height } = orientedDimensions(jpegMeta.w, jpegMeta.h, jpegMeta.orient);
+    return { format, width, height, jpegMeta };
+  }
   const header = parseHeaderDimensions(bytes, format);
   if (header) return { format, width: header.width, height: header.height };
   try {
@@ -297,6 +305,7 @@ async function inspect(bytes: Uint8Array): Promise<InspectInfo> {
 // ── pdf helpers ──────────────────────────────────────────────────────────
 
 async function pdfPageCount(bytes: Uint8Array): Promise<number> {
+  assertSaneInputSize('pdfPageCount', bytes, 'pdfPageCount');
   const pdfium = codecs!.pdfium;
   const ptr = pdfium.heap.malloc(bytes.length);
   if (!ptr) throw new Error('out of memory loading pdf into the pdfium heap');
@@ -354,8 +363,9 @@ async function runPipeline(
   const originalFormat = format;
   const jpegMeta = format === 'jpg' ? parseJpegMeta(current) : null;
   const headerMeta = !jpegMeta && format ? parseHeaderDimensions(current, format) : null;
-  const sourceW = jpegMeta?.w ?? headerMeta?.width;
-  const sourceH = jpegMeta?.h ?? headerMeta?.height;
+  const sourceDims = jpegMeta ? orientedDimensions(jpegMeta.w, jpegMeta.h, jpegMeta.orient) : null;
+  const sourceW = sourceDims?.width ?? headerMeta?.width;
+  const sourceH = sourceDims?.height ?? headerMeta?.height;
   log(id, 'source', `${current.byteLength.toLocaleString()} bytes, detected format: ${format ?? 'unrecognized'}`);
   stages.push({
     stage: 'source',
@@ -700,7 +710,23 @@ async function runPipeline(
 let queue: Promise<void> = Promise.resolve();
 
 ctx.onmessage = (ev: MessageEvent<WorkerRequest>) => {
-  queue = queue.then(() => handleRequest(ev.data));
+  queue = queue
+    // If the previous link in the chain somehow rejected (see the
+    // last-resort .catch below, this should normally never fire), swallow
+    // it here too so one bad request can never permanently wedge every
+    // request queued after it.
+    .catch(() => {})
+    .then(() => handleRequest(ev.data))
+    .catch((e) => {
+      // handleRequest() already catches every expected error internally
+      // and reports it via result(req.id, ...). This is defense against
+      // something unexpected escaping that try/catch (e.g. in the
+      // dispatch/posting path itself) — without it, that rejection would
+      // propagate into `queue` and every subsequent .then() on this chain
+      // would silently stop running, wedging the worker for good.
+      const message = e instanceof Error ? e.message : String(e);
+      post({ id: ev.data.id, type: 'error', message });
+    });
 };
 
 async function handleRequest(req: WorkerRequest): Promise<void> {

@@ -15,7 +15,7 @@
 
 import { VaultError } from '../errors.js';
 import { makeImageData } from '../image-data.js';
-import { assertSaneImageDimensions } from '../limits.js';
+import { assertSaneImageDimensions, assertEncodableImageDimensions } from '../limits.js';
 
 const TOOL = 'convertFormat';
 
@@ -24,6 +24,7 @@ const ORIGIN_TOP_LEFT_BIT = 0x20;
 
 export function encodeTga(image: ImageData): Uint8Array {
   const { width, height, data } = image;
+  assertEncodableImageDimensions(TOOL, width, height, 'tga');
   const header = new Uint8Array(18);
   header[2] = IMAGE_TYPE_UNCOMPRESSED_TRUECOLOR;
   // width/height are little-endian uint16

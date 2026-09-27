@@ -149,6 +149,7 @@ export async function createTokenClient(clientId: string): Promise<TokenClientHa
 
   let resolveCurrent: ((t: DriveToken) => void) | null = null;
   let rejectCurrent: ((e: Error) => void) | null = null;
+  let inFlight: Promise<DriveToken> | null = null;
 
   const client = google.accounts.oauth2.initTokenClient({
     client_id: clientId,
@@ -171,11 +172,25 @@ export async function createTokenClient(clientId: string): Promise<TokenClientHa
 
   return {
     requestToken(opts) {
-      return new Promise<DriveToken>((resolve, reject) => {
+      // initTokenClient() above wires exactly one shared `callback`/
+      // `error_callback` pair to this client instance — there's no way to
+      // run two independent token requests through it at once. Without
+      // this guard, a second concurrent call (e.g. two 401s from
+      // Promise.all-ed uploads each triggering their own silent renewal)
+      // would overwrite resolveCurrent/rejectCurrent above, and the first
+      // caller's promise would then never resolve or reject — it'd just
+      // hang forever once the callback only ever fires for the second
+      // request. Instead, every concurrent caller shares the one in-flight
+      // promise and gets the same eventual token (or the same failure).
+      if (inFlight) return inFlight;
+      inFlight = new Promise<DriveToken>((resolve, reject) => {
         resolveCurrent = resolve;
         rejectCurrent = reject;
         client.requestAccessToken({ prompt: opts?.silent ? '' : 'consent' });
+      }).finally(() => {
+        inFlight = null;
       });
+      return inFlight;
     },
     signOut(token) {
       if (token) {

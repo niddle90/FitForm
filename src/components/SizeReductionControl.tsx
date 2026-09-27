@@ -31,7 +31,7 @@ export function SizeReductionControl({ enabled, onEnabledChange, targetKb, onTar
             step={1}
             inputMode="numeric"
             value={targetKb}
-            onChange={(e) => onTargetKbChange(Math.max(1, Number(e.target.value) || 1))}
+            onChange={(e) => onTargetKbChange(Math.max(1, Math.round(Number(e.target.value) || 1)))}
           />
         </label>
       )}

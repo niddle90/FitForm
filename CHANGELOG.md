@@ -1127,3 +1127,447 @@ before/after.
 - **Verified:** mobile (390px) pixel-identical before/after both pages;
   visually checked 820/1024/1280/1440/1920px and a dark-mode pass in
   headless Chromium.
+
+---
+
+## 17. Fixes from two more external reviews: `smoke-test.mjs` rename, WASM error taxonomy, input-size/encoder hardening, and doc accuracy
+
+Two more independent reviews of the current source. The first re-flagged
+the `vault-suite`/`vxpress` naming gap §15 left open as "not fixed
+(pre-existing)"; the second focused on `imaging`'s own public API
+(`compress`, the BMP/TGA encoders, and the jpegopt bisection's
+documentation). All items from both are addressed here.
+
+### `smoke-test.mjs` finally updated off the old `vault-suite` names
+
+**Bug:** exactly the gap §15 called out — `scripts/smoke-test.mjs` still
+imported `vault-suite` / `vault-suite/node` and called `vxpress`,
+`vxprint`, `vxconv`, `vxpeel`, `vxbind` instead of `imaging`'s real
+exports, so `npm run smoke-test` (and therefore `npm test`) failed with
+`ERR_MODULE_NOT_FOUND` from a clean install.
+
+**Fix:** renamed every import and call site to the real `imaging` exports
+(`compress`, `printLayout`, `convertFormat`, `pdfToImages`, `jpegsToPdf`,
+`parseJpegMeta`, `detectFormat`) — the same five-name mapping §15's
+"not fixed" note already worked out by hand, now applied to the actual
+script instead of a temporary copy. Also swept stale `vault-suite`
+mentions out of `scripts/copy-wasm-assets.mjs`'s comments.
+
+**Verified:** `npm install` from a clean checkout, then `npm test`
+(`pipeline-test` → `client-test` → `smoke-test`) all green — the first
+genuinely clean `npm test` run this log has been able to report, since
+every prior entry's `npm test` mention was `pipeline-test`+`client-test`
+only, with `smoke-test` broken. `npm run build` and `oxlint` also clean.
+
+### Worker request queue could wedge permanently on an unexpected error
+
+**Bug:** `ctx.onmessage` in `worker.ts` chained every request onto one
+shared `queue` promise (`queue = queue.then(() => handleRequest(...))`)
+with nothing catching a rejection at the chain level. `handleRequest()`
+already catches every expected error internally, so this was never hit in
+practice, but nothing stopped some future change — or a genuinely
+unexpected exception in the dispatch/posting path itself — from rejecting
+`queue` and silently stopping every `.then()` queued after it, wedging the
+worker for the rest of the session.
+
+**Fix:** `ctx.onmessage` now does `.catch(() => {})` before chaining the
+next request (so a previously-rejected link can never poison the chain)
+and wraps the `handleRequest()` call in its own last-resort `.catch` that
+reports a worker `error` message instead of letting anything escape.
+
+**Verified:** `tsc -b` clean; `client-test.mjs`'s existing crash/restart/
+cancellation coverage unaffected (12/12 passing) — this change only alters
+behavior on a path those tests don't currently exercise (an exception
+outside `handleRequest`'s own try/catch), by design a defensive backstop
+rather than a reachable-today bug fix.
+
+### Unbounded numeric dimension inputs
+
+**Bug:** `DimensionsControl.tsx`'s width/height `<input type="number">`
+handlers did `Math.max(1, Number(e.target.value))` with no upper bound and
+no finite-value check, so a pasted value like `1e309` (`Number` parses
+this as `Infinity`) reached `buildPipelineConfig()` and, from there,
+`compress`'s `width`/`height` options.
+
+**Fix:** added a local `MAX_DIMENSION_PX` (20,000 — mirrors `imaging`'s
+own `MAX_IMAGE_DIMENSION`, kept as a separate literal rather than an
+import so `worker.ts` stays the only file in this app that imports
+`imaging`, per its own header comment) and a `clampDimensionInput()`
+helper that rejects non-finite input and clamps to `[1, MAX_DIMENSION_PX]`
+before it ever reaches pipeline state. Added `max={MAX_DIMENSION_PX}` to
+both inputs for native browser feedback too.
+
+**Verified:** `tsc -b` clean.
+
+### `compress()`'s `targetKb` accepted fractional values despite its own documented contract
+
+**Bug:** `compress.ts` validated `options.targetKb` with
+`Number.isFinite(...) && > 0`, then did `Math.floor(options.targetKb)` —
+so `targetKb: 0.5` passed validation and silently became `targetKb: 0`,
+even though the thrown-on-failure message says *"must be a positive
+integer."* A `0` target then reached the WASM engine as a real value
+instead of the error the API's own contract promises for it.
+
+**Fix:** validate with `Number.isInteger(...) && > 0` instead, so a
+fractional value is rejected outright; the `Math.floor` became
+unnecessary and was removed. Also rounded `SizeReductionControl.tsx`'s
+number-input handler (`Math.round` instead of a bare `Number(...)`) —
+its `step={1}` doesn't stop a typed value like `5.5` from reaching
+`onChange`, and `compress()` rejecting that outright is worse UX than the
+UI never producing it.
+
+**Verified:** added a regression test (`imaging/test/run.ts`,
+`'rejects fractional target-kb instead of silently flooring it'`)
+asserting `compress(photo, { targetKb: 0.5 })` throws `VaultError(ARGS)`
+instead of silently running with `targetKb: 0`. Full `imaging` suite:
+45/45 passing.
+
+### WASM allocation/runtime failures were reported as `ARGS`
+
+**Bug:** `runWasmEngine()`'s `catch` around `engine.run(...)` wrapped
+*every* error as `VaultError(TOOL, 'ARGS', ...)`, with a comment claiming
+this was specifically for the `RangeError` `jpegopt-engine.ts`'s own
+argument validation throws. The catch itself didn't check the error
+type, though — `jpegopt-engine.ts` also throws a plain `Error` for a WASM
+allocation failure (`'jpegopt: out of WASM memory allocating the input
+buffer'`), and any other unexpected Emscripten runtime abort would hit
+the same catch — so a genuine memory/runtime failure was mislabeled as a
+bad *argument*, undermining the point of having a categorized error
+taxonomy (`errors.ts` already defines `MEMORY` for exactly this case).
+
+**Fix:** the catch now checks `e instanceof RangeError` — the one case
+`jpegopt-engine.ts`'s own doc comment documents as argument validation —
+and classifies that as `ARGS`; everything else reaching this catch is
+classified as `MEMORY`, since `run()`'s only other failure modes are
+allocation/runtime failures (a decode failure isn't among them — `run()`
+returns `null` for that instead of throwing, handled separately).
+
+**Verified:** `imaging` suite passing (45/45); this specific
+reclassification isn't independently covered by a new test — reliably
+forcing a genuine WASM allocation failure or Emscripten abort inside a
+test isn't practical without destabilizing the shared WASM instance other
+tests reuse — so this one is source-level-verified (traced against
+`jpegopt-engine.ts`'s documented throw sites) rather than test-verified.
+Worth a follow-up if a way to force it safely turns up.
+
+### No ceiling on encoded input size before it's copied into WASM/canvas memory
+
+**Gap:** `MAX_IMAGE_DIMENSION`/`MAX_IMAGE_PIXELS` (added in §14) bound the
+*decoded* pixel buffer a declared width/height can force, but nothing
+bounded the *encoded* file itself — a valid small image can still arrive
+wrapped in an arbitrarily large byte stream, and `compress`/`convertFormat`/
+`printLayout`/`pdfToImages` all copy the whole input into WASM memory
+(`mod.HEAPU8.set(input, inPtr)`) or hand it to a decoder as one buffer
+before any pixel-level guard runs.
+
+**Fix:** added `MAX_INPUT_BYTES` (100MB) and `assertSaneInputSize()` to
+`limits.ts`, wired in at the top of all four raw-byte entry points, ahead
+of any decoding.
+
+**Verified:** added `'rejects an oversized input as MEMORY before doing
+any work'` to `imaging/test/run.ts`, using a deliberately empty-but-
+correctly-sized `Uint8Array(MAX_INPUT_BYTES + 1)` (an allocation, not real
+image data) to prove the check fires before any real work happens. Full
+suite: 45/45 passing.
+
+### `encodeBmp`/`encodeTga` had no dimension validation of their own
+
+**Gap:** `decodeBmp`/`decodeTga` both call `assertSaneImageDimensions()`
+on the width/height they read out of a file header, but the encoders
+(`encodeBmp`/`encodeTga`) are public API taking an arbitrary caller-
+supplied `ImageData` and had no validation at all. `encodeTga`
+specifically writes width/height straight into 16-bit header fields —
+a caller-supplied dimension above 65,535, or a negative/fractional one,
+would silently wrap or corrupt the header instead of failing.
+
+**Fix:** added `assertEncodableImageDimensions()` to `limits.ts` — `ARGS`
+for non-integer/negative dimensions, `MEMORY` for anything past
+`MAX_IMAGE_DIMENSION`/`MAX_IMAGE_PIXELS` (20,000px comfortably covers
+TGA's 16-bit ceiling, so passing this check also guarantees no header
+field can wrap) — and call it at the top of both `encodeBmp` and
+`encodeTga`.
+
+**Verified:** four new tests in `imaging/test/run.ts` covering both
+encoders' non-integer/negative and oversized cases, using a minimal
+`fakeImageData()` stand-in (empty pixel buffer — the dimension check must
+reject before `data` is ever touched, so a real multi-GB buffer isn't
+needed to prove it). Full suite: 45/45 passing.
+
+### Bisection quality search documented as a mathematical guarantee it isn't
+
+**Gap:** `imaging/README.md`, `native/jpegopt-fast-core/README.md`, and
+`jpegopt.c`'s own header comment all stated "JPEG size vs. quality is
+monotonic for a fixed image" as flat fact. It's a reliable *practical*
+property for a fixed subsampling/progressive/dimension configuration —
+not something libjpeg(-turbo) or the JPEG spec formally guarantees for
+every configuration — and the bisection search's correctness rests on it
+holding, so overstating it as unconditional oversells what the algorithm
+actually proves.
+
+**Fix:** reworded all three to "monotonic … in practice … not a formally
+guaranteed property," instead of an unconditional claim. Comment-only
+change to `jpegopt.c` — no logic touched.
+
+**Verified:** re-installed `libjpeg-turbo8-dev` and compiled the native
+core directly (`cc -O2 -Wall -o jpegopt src/jpegopt.c -ljpeg -lm`) —
+clean, no warnings — then ran it against a synthetic 1600×1200 JPEG with
+a 20KB target: `347x260 px, q=31, 19816 bytes (target 20 KB), met
+target`. Confirms the comment-only edit didn't touch anything that
+affects the compiled binary's behavior.
+
+**Verified (whole entry):** `npm install` clean; `npm test`
+(`pipeline-test` → `client-test` → `smoke-test`) all green from a real
+clean install for the first time this log records; `npm run build`
+clean; `oxlint`: 0 errors, 33 pre-existing cosmetic warnings (two
+`useCallback` deps in `CropPositioner.tsx`, one `set-state-in-effect` in
+`PreviewResult.tsx`, shadcn's `only-export-components` in `ui/badge.tsx`/
+`ui/button.tsx` — none touched, all judged not worth changing working code
+to satisfy a lint rule); `imaging`'s own suite: 45/45 passing, up from the
+39/39 §9 last reported; native core compiles and runs correctly outside
+the WASM build too.
+
+---
+
+## 18. PDF input/race hardening, OAuth single-flight, Drive pagination, and EXIF orientation
+
+A third external review, this time focused on the PDF paths, Drive/OAuth
+concurrency, and a real correctness gap in the image pipeline (EXIF
+orientation). Three P1s, four P2s, addressed here.
+
+### PDF page-count bypassed the input-size guard
+
+**Bug:** §17 added `assertSaneInputSize()`/`MAX_INPUT_BYTES` and wired it
+into every raw-byte `imaging` entry point — except `pdfPageCount()` in
+`worker.ts`, which isn't part of `imaging` at all (it talks to `pdfium`
+directly for a cheap page-count-only call) and so wasn't covered. It went
+straight to `pdfium.heap.malloc(bytes.length)` with no size check. Also,
+`App.tsx`'s `handleFile()` read the *entire* file into memory
+(`f.arrayBuffer()`) before checking `File.size` anywhere, so an oversized
+file was fully materialized on the main thread regardless of what any
+worker-side guard would eventually do with it.
+
+**Fix:** exported `MAX_INPUT_BYTES`/`assertSaneInputSize` from `imaging`'s
+public API (they existed in `limits.ts` but weren't re-exported from
+`index.ts`) and call it at the top of `pdfPageCount()`. Added a local
+`MAX_INPUT_BYTES` mirror in `App.tsx` (same reasoning as
+`DimensionsControl.tsx`'s `MAX_DIMENSION_PX` — `worker.ts` stays the only
+file that imports `imaging`) and check `f.size` before `f.arrayBuffer()`
+is ever called, surfaced through the existing `runError` UI path.
+
+**Verified:** `tsc -b` clean.
+
+### PDF operations had a stale-result race
+
+**Bug:** the normal image pipeline's `handleRun()` already captures
+`const myRunId = (runIdRef.current += 1)` and checks it before every state
+update after an `await` — exactly the guard needed to stop a superseded
+run from landing its results. `handleExtract()` and the page-count effect
+had no equivalent: `handleExtract` called `invalidateActiveRun()` (which
+bumps the same counter) but never captured its *own* id or checked it
+afterward, and the page-count effect's `.then(setPdfPageCount)` had no
+cleanup at all. So: select PDF A, start extracting, select PDF B before
+extraction finishes — PDF A's extracted page could still land in state
+after PDF B is already selected.
+
+**Fix:** `handleExtract` now does `invalidateActiveRun(); const myRunId =
+runIdRef.current;` and checks `runIdRef.current !== myRunId` before every
+state update (including in `finally`, before resetting `pdfExtracting`).
+`invalidateActiveRun()` itself now also unconditionally resets
+`pdfExtracting` to `false`, so a stale extraction being invalidated by a
+*new* file/page selection (rather than a newer extraction) doesn't leave
+the "extracting…" UI stuck once its own updates are guarded out. The
+page-count effect now follows the same `let cancelled = false` / cleanup
+pattern the `inspect` effect already used.
+
+**Verified:** `tsc -b` clean; existing `client-test.mjs` coverage
+unaffected (12/12 passing) — this bug lived entirely in `App.tsx`'s own
+async orchestration, outside what that suite exercises.
+
+### Google OAuth token refresh wasn't concurrency-safe
+
+**Bug, the most important of this round:** `createTokenClient()` in
+`auth.ts` keeps exactly one pair of shared `resolveCurrent`/
+`rejectCurrent` closures, because Google Identity Services'
+`initTokenClient()` wires exactly one shared `callback`/`error_callback`
+to the client instance — there's no way to run two independent token
+requests through it at once. `requestToken()` didn't account for that: it
+unconditionally overwrote both resolvers on every call. `useDrive.ts`'s
+`upload()` runs multiple files through `Promise.all()`, and a silent
+renewal fires independently per-request on a 401 — so two uploads hitting
+an expired token at the same moment each call `requestToken({ silent:
+true })`, the second overwrites the first's resolvers, and the first
+caller's promise then never settles: its resolve/reject references are
+gone, and GIS's one shared callback only ever fires for whichever request
+is still "current." A simultaneous token expiry could hang one or more
+Vault operations indefinitely.
+
+**Fix:** `requestToken()` is now single-flight — an `inFlight` promise is
+tracked, and if one is already in progress, every concurrent caller gets
+*that same promise* instead of starting (and clobbering) their own. It's
+cleared via `.finally()` once the request settles, so a later call (after
+the in-flight one resolves) correctly starts a fresh request rather than
+replaying a stale result.
+
+**Verified:** with a small mock Google Identity Services stand-in
+(`initTokenClient`/`requestAccessToken`/one shared `callback`), confirmed
+two concurrent `requestToken({ silent: true })` calls now resolve to the
+same token from exactly one underlying `requestAccessToken()` call, and a
+later call after settling starts a genuinely new request (2 total calls
+across both checks). Re-ran the identical harness against the *old*
+implementation first to confirm it actually reproduces the bug — one of
+the two concurrent calls hangs forever, exactly as described, the process
+had to be killed by a timeout rather than exiting — before restoring the
+fix, so this isn't a test that would have passed either way.
+
+### Vault listing silently stopped at 200 files
+
+**Bug:** `listFiles()` in `api.ts` requested `pageSize: '200'` and
+returned `body.files` directly, never reading `body.nextPageToken`. Once
+a Vault folder passed 200 files, everything past the first page silently
+disappeared from the UI — not an error, just missing files, which is a
+worse failure mode than a visible one.
+
+**Fix:** `listFiles()` now loops, following `nextPageToken` and
+accumulating `files` across pages, until Drive stops returning a token.
+
+**Verified:** with a mocked two-page `fetch` (first page returns 2 files
++ a `nextPageToken`, second returns 1 file + none), confirmed exactly 2
+fetch calls and all 3 files returned in order.
+
+### The `imaging` suite wasn't part of `npm test`
+
+**Gap:** `imaging/test/run.ts` — the malformed/adversarial-input coverage
+(§17 grew this to 45 tests) — is only reachable via `npm test --prefix
+imaging` or `npm test` from inside `imaging/`. The root `npm test` never
+touched it, so a regression there wouldn't show up in the project's
+normal test command.
+
+**Fix:** root `npm test` now runs `npm test --prefix imaging` as its
+final step, after `pipeline-test`, `client-test`, the new
+`exif-orientation-test` (below), and `smoke-test`.
+
+### Deploy script and Vite base-path configuration could drift apart
+
+**Gap:** `vite.config.ts` documents `VITE_BASE_PATH=/repo-name/` as the
+way to set the deployment base path, but `package.json`'s `deploy` script
+hardcoded `VITE_BASE_PATH=/FitForm/` directly — correct for *this* repo
+today, but silently wrong the moment the repo is renamed or forked, with
+nothing to catch the drift.
+
+**Fix:** added `scripts/resolve-base-path.mjs`, which resolves the path
+with precedence: an already-set `VITE_BASE_PATH` env var (explicit
+override, respected as-is) → derived from `git remote get-url origin`'s
+repo name (what a GitHub Pages project-page URL is actually keyed on —
+deliberately *not* `package.json`'s `"name"` field, which doesn't match
+here: `"fitform"` vs. the real `"FitForm"` repo) → a hardcoded
+`/FitForm/` fallback if git isn't available at all (e.g. building from a
+downloaded zip). `deploy` now runs `VITE_BASE_PATH=$(node
+scripts/resolve-base-path.mjs) npm run build && gh-pages -d dist`.
+
+**Verified:** ran the script directly in three scenarios — no git remote
+(falls back to `/FitForm/`), a repo cloned with `origin` pointed at
+`.../someuser/CoolRepo.git` (resolves `/CoolRepo/`), and with
+`VITE_BASE_PATH=/custom/` set in the environment (honors the override) —
+all three correct.
+
+### EXIF orientation was parsed but never applied to the image pipeline
+
+**Bug, the substantial one this round:** `jpegsToPdf.ts` (in `imaging`)
+already corrects for EXIF orientation when wrapping a JPEG into a PDF —
+it rotates the PDF page via a content-stream matrix, since a PDF page can
+just declare a transform. The pixel-level pipeline in `worker.ts`
+(decode → resize → crop → compress → convert) had no equivalent at all:
+`decodeToImageData()` decoded raw JPEG pixels and every later stage
+operated on them exactly as stored, completely ignoring the orientation
+tag. A phone photo taken in portrait — which JPEG almost always stores as
+a landscape pixel grid plus a rotation tag, not literally rotated pixels
+— would get resized/cropped against the *stored* aspect ratio instead of
+the *displayed* one (wrong crop-anchor behavior, wrong resize aspect
+ratio), and the final re-encoded JPEG carries no orientation tag at all
+(none of this pipeline's encoders write EXIF), so the output would come
+out visibly rotated in *every* viewer, including ones that do
+auto-rotate the original.
+
+**Fix:** added `src/engine/exif-orientation.ts` — pure, dependency-free
+`orientedDimensions()` and `applyExifOrientation()` — and wired it into
+`decodeToImageData()`: JPEG input's EXIF orientation is now read via the
+already-available `parseJpegMeta()` and the decoded pixel buffer is
+physically rotated into display orientation immediately after decode,
+before any other stage sees it. Every later stage just works on
+correctly-oriented pixels without needing to know orientation is a thing,
+and the output needs no orientation tag because it's already right-side
+up. Also updated `inspect()` and the pipeline's "source" stage metadata
+to report EXIF-corrected (display) dimensions, so the UI's crop/dimension
+controls agree with what actually gets decoded, instead of the raw
+stored width/height.
+
+Scope matches `jpegsToPdf.ts`'s own `switch (m.orient)` exactly: only 3
+(180°), 6 (90° CW), and 8 (90° CCW) are handled — what an in-camera
+rotation sensor actually produces, covering the overwhelming majority of
+real-world orientation tags. Orientations 2/4/5/7 (mirror flips,
+effectively never produced by a camera) pass through unchanged, same as
+`jpegsToPdf`'s own `default` case — kept deliberately identical in scope
+to the existing, already-shipped PDF-path precedent rather than going
+further.
+
+The two helpers were pulled into their own file specifically so they're
+unit-testable outside a real Worker: `worker.ts` does `const ctx: any =
+self` at module scope, which throws in plain Node, so nothing in it can
+be imported directly by a script-style test the way `exif-orientation.ts`
+now can be.
+
+**Verified:** new `scripts/exif-orientation-test.mjs` (wired into `npm
+test` as `exif-orientation-test`) — 11 checks against a small
+hand-labeled 3×2 test image (`A B C / D E F`), including the exact
+expected pixel layout for each of orientations 3/6/8 (derived by hand
+from the standard rotation formulas, independently cross-checked with a
+90°-CW-then-90°-CCW round-trip that reproduces the original), an
+orientation-2 passthrough check, `orientedDimensions()` on its own, and
+an alpha-channel-survives-rotation check (rotation is only sanity-checked
+against the sampled red channel elsewhere, so this confirms the whole
+pixel, not just one channel, actually moves). All 11 passing.
+
+### The 60-megapixel decode ceiling is a hostile-input guard, not a working-memory budget
+
+**Gap:** `imaging`'s `MAX_IMAGE_PIXELS` (60 megapixels, ~229MB as RGBA) is
+deliberately generous — it exists to stop a malformed/hostile file from
+forcing an oversized allocation, not to model what's actually safe to
+*process* on constrained hardware. The pipeline's real peak memory is
+several buffers deep on top of that one number (original bytes, worker
+transfer copy, decoded RGBA, resize output, encoder buffers, WASM heap),
+and a low-memory Android phone's browser tab can be killed well before a
+genuine 60-megapixel image gets anywhere near the end of that pipeline.
+
+**Fix:** rather than lowering the shared `imaging`-level ceiling (which
+is also relied on for hostile-input protection across BMP/TGA/PDF
+decoding and would unnecessarily constrain legitimate large images on
+capable hardware), added a second, lower, *device-adaptive* ceiling in
+`App.tsx`: `LOW_MEMORY_MAX_PIXELS` (24 megapixels), enforced in
+`handleRun()` only when the Device Memory API
+(`navigator.deviceMemory`) reports a memory-constrained device (<=4GB —
+Chrome's own rough "low-end device" cutoff). Ordinary phone photos
+(a modern phone's main camera is typically 8–12MP; most "high-res" modes
+stay under 24MP) are unaffected; only genuinely large images (48MP+
+pro-mode shots, big panoramas/scans) are turned away, with a clear
+reason, on hardware where attempting them is a real crash risk. The
+Device Memory API is Chromium-only (not Safari/Firefox); its absence is
+treated as "can't tell, don't additionally restrict" rather than guessed
+from platform/UA, so this fails open rather than risking false positives
+on capable hardware the API just doesn't run on. Not a full "adaptive
+ceiling on a continuous scale" as the review's more ambitious framing
+put it — a coarser two-tier version of the same idea, which is what was
+achievable without device-lab access to tune anything finer.
+
+**Verified:** `tsc -b` clean. Not covered by an automated test — the
+Device Memory API and its low-memory branch aren't practically
+exercisable from this project's Node-based test scripts (no browser
+environment, no way to fake `navigator.deviceMemory` short of a headless
+browser harness this project doesn't otherwise have) — so this one is
+source-level-verified rather than test-verified.
+
+**Verified (whole entry):** `npm install` clean; full `npm test`
+(`pipeline-test` → `client-test` → `exif-orientation-test` → `smoke-test`
+→ `imaging`'s own suite) all green — 45/45 in the `imaging` suite, 11/11
+new EXIF-orientation checks, everything else unchanged; `npm run build`
+clean; `oxlint`: 0 errors, same 33 pre-existing cosmetic warnings as §17
+(none newly introduced).

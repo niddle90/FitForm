@@ -27,6 +27,7 @@
 
 import type { JpegCodec, PdfiumBinding } from './codecs.js';
 import { VaultError, silentLogger, type Logger } from './errors.js';
+import { assertSaneInputSize } from './limits.js';
 import { makeImageData } from './image-data.js';
 
 const TARGET_DIM = 4000.0;
@@ -106,6 +107,8 @@ export async function pdfToImages(
   const log =
     options.onLog ?? (options.verbose ? (m: string) => console.error(`[pdfToImages] ${m}`) : silentLogger);
   const pdfium = codecs.pdfium;
+
+  assertSaneInputSize(TOOL, input, 'pdfToImages');
 
   const quality = options.quality ?? 85;
   if (quality < 1 || quality > 100) {

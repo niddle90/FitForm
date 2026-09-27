@@ -32,6 +32,7 @@
 
 import type { JpegCodec, ResizeCodec } from './codecs.js';
 import { VaultError, silentLogger, type Logger } from './errors.js';
+import { assertSaneInputSize } from './limits.js';
 import { makeImageData } from './image-data.js';
 
 const A4_WIDTH_CM = 21.0;
@@ -74,6 +75,8 @@ export async function printLayout(
   const TOOL = 'printLayout';
   const log =
     options.onLog ?? (options.verbose ? (m: string) => console.error(`[printLayout] ${m}`) : silentLogger);
+
+  assertSaneInputSize(TOOL, input, 'printLayout');
 
   const wCm = options.widthCm ?? 0;
   const hCm = options.heightCm ?? 0;

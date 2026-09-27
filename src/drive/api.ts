@@ -103,16 +103,23 @@ export async function ensureVaultFolder(token: string): Promise<string> {
 }
 
 export async function listFiles(token: string, folderId: string): Promise<DriveFile[]> {
-  const params = new URLSearchParams({
-    q: `'${folderId}' in parents and trashed = false`,
-    fields: 'files(id,name,mimeType,size,modifiedTime,iconLink,thumbnailLink)',
-    orderBy: 'modifiedTime desc',
-    pageSize: '200',
-    spaces: 'drive',
-  });
-  const res = await driveFetch(token, `${DRIVE_API}/files?${params.toString()}`);
-  const body = await res.json();
-  return body.files || [];
+  const files: DriveFile[] = [];
+  let pageToken: string | undefined;
+  do {
+    const params = new URLSearchParams({
+      q: `'${folderId}' in parents and trashed = false`,
+      fields: 'nextPageToken,files(id,name,mimeType,size,modifiedTime,iconLink,thumbnailLink)',
+      orderBy: 'modifiedTime desc',
+      pageSize: '200',
+      spaces: 'drive',
+    });
+    if (pageToken) params.set('pageToken', pageToken);
+    const res = await driveFetch(token, `${DRIVE_API}/files?${params.toString()}`);
+    const body = await res.json();
+    files.push(...(body.files || []));
+    pageToken = body.nextPageToken || undefined;
+  } while (pageToken);
+  return files;
 }
 
 export async function uploadFile(
